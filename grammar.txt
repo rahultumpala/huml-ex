@@ -1,0 +1,73 @@
+huml_document = (NEWLINE? huml_version NEWLINE)? NEWLINE? root_value NEWLINE?;
+
+huml_version = "%HUML " version_string;
+version_string = ( alpha | digit | '.' | '_' | '-' )+;
+
+alpha = ['a'..'z'] | ['A'..'Z'];
+digit = ['0'..'9'];
+
+(* root value needs disambiguating between inline & multiline vectors *)
+root_value =
+    scalar_key_value ( ", " scalar_key_value )+  (* inline dict, not multiline *)
+  | scalar ( ", " scalar )+                      (* inline list, not scalar *)
+  | multiline_vector
+  | scalar
+  | "[]"
+  | "{}"
+  ;
+
+scalar =
+    STRING
+  | FLOAT
+  | INT
+  | bool
+  | null
+  ;
+
+bool = "true" | "false";
+null = "null";
+
+(* vectors *)
+vector = inline_vector | multiline_vector;
+
+inline_vector = inline_list | inline_dict;
+
+multiline_vector = multiline_list | multiline_dict;
+
+(* lists *)
+
+inline_list = "[]" | scalar ( ", " scalar )*;
+
+multiline_list = multiline_list_item multiline_list_items;
+
+multiline_list_items =
+    NEWLINE multiline_list_item multiline_list_items
+  | NEWLINE?
+  ;
+
+multiline_list_item =
+    "- " scalar
+  | "- " INLINE_VECTOR_START inline_vector
+  | "- " MULTILINE_VECTOR_START NEWLINE INDENT multiline_vector DEDENT
+  ;
+
+(* dicts *)
+
+inline_dict = "{}" | scalar_key_value ( ", " scalar_key_value )*;
+
+multiline_dict = multiline_dict_item multiline_dict_items;
+
+multiline_dict_items =
+    NEWLINE multiline_dict_item multiline_dict_items
+  | NEWLINE?
+  ;
+
+multiline_dict_item =
+    scalar_key_value
+  | dict_key INLINE_VECTOR_START inline_vector
+  | dict_key MULTILINE_VECTOR_START NEWLINE INDENT multiline_vector DEDENT
+  ;
+
+scalar_key_value = dict_key ": " scalar;
+dict_key = simple_key | STRING;
+simple_key = alpha ( alpha | digit | '_' | '-' )*;

@@ -3,7 +3,7 @@ defmodule HUML do
   Documentation for `HUML`.
   """
 
-  import Huml.{Vsn, Helpers, Tokenizer}
+  import Huml.{Vsn, Helpers, Tokenizer, Root}
 
   def hello do
     :i_am_huml
@@ -23,5 +23,6 @@ defmodule HUML do
 
   def parse(tokens) do
     parse_vsn(tokens)
+    |> parse_root()
   end
 end

@@ -41,4 +41,14 @@ defmodule Huml.Helpers do
       end
     end)
   end
+
+  def read_until(tokens, match_tokens) do
+    Enum.split_while(tokens, fn {_line, _col, tok} -> !(tok in match_tokens) end)
+  end
+
+  def check_key(tokens) do
+    tokens
+    |> join_tokens()
+    |> dbg()
+  end
 end
