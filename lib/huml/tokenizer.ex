@@ -34,9 +34,6 @@ defmodule Huml.Tokenizer do
           " " ->
             :whitespace
 
-          "\"" ->
-            :quote
-
           "`" ->
             :backtick
 

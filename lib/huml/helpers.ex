@@ -46,9 +46,21 @@ defmodule Huml.Helpers do
     Enum.split_while(tokens, fn {_line, _col, tok} -> !(tok in match_tokens) end)
   end
 
-  def check_key(tokens) do
-    tokens
-    |> join_tokens()
-    |> dbg()
+  def consume(tokens, num) do
+    {_discard, rest} = Enum.split(tokens, num)
+    rest
+  end
+
+  def normalize_tokens(joined) do
+    string_rgx = ~r/^"(?<str>(\\\"|[^"\n ])*)"(?<comment>( # [^ \n]*))?/
+    dict_key_rgx = ~r/(?<dict_key>^[a-zA-Z]([a-z]|[A-Z]|[0-9]|-|_)*$)/
+
+    cond do
+      Regex.match?(string_rgx, joined) ->
+        Regex.named_captures(string_rgx, joined) |> Map.get("str")
+
+      Regex.match?(dict_key_rgx, joined) ->
+        Regex.named_captures(dict_key_rgx, joined) |> Map.get("dict_key")
+    end
   end
 end

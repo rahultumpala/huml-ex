@@ -18,7 +18,7 @@ defmodule Huml.Vsn do
           case read_vsn(content) do
             {:ok, vsn} ->
               read_vsn(content)
-              {%{version: vsn}, rest}
+              {rest, %{version: vsn, entries: []}}
 
             {:error, :no_vsn} ->
               raise Huml.ParseError,
@@ -28,7 +28,7 @@ defmodule Huml.Vsn do
         else
           _ ->
             # return all tokens as version was not found.
-            {%{}, tokens}
+            {tokens, %{entries: []}}
         end
     end
   end

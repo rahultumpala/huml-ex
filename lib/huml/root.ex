@@ -1,7 +1,11 @@
 defmodule Huml.Root do
   import Huml.{Helpers}
 
-  def parse_root({struct, [cur | _rest] = tokens}) do
+  def parse_root([], struct) do
+    {struct, []}
+  end
+
+  def parse_root([cur | _rest] = tokens, struct) do
     case cur do
       {_line, _col, :square_bracket_open} ->
         parse_empty_list(struct, tokens)
@@ -10,11 +14,53 @@ defmodule Huml.Root do
         parse_empty_dict(struct, tokens)
 
       _ ->
-        {next, rest} = read_until(tokens, [:whitespace, ",", :newline, :colon, :eol]) |> dbg()
+        {next_seq, rest} = read_until(tokens, [:whitespace, ",", :newline, :colon, :eol]) |> dbg()
 
-        check_key(next)
+        [next_token | _rest] = rest
 
-        {struct, rest}
+        {struct, rest} =
+          case next_token do
+            {_, _, :colon} ->
+              parse_dicts(tokens)
+
+            {_, _, ","} ->
+              parse_lists(tokens)
+
+            {_, _, :eol} ->
+              cond do
+                length(next_seq) == 0 ->
+                  tokens |> consume(1) |> parse_root(struct)
+
+                length(next_seq) > 0 ->
+                  struct =
+                    struct
+                    |> Map.update(:entries, [], fn val -> [join_tokens(next_seq) |> normalize_tokens() |> dbg] ++ val end)
+
+                  rest |> consume(1) |> parse_root(struct)
+              end
+
+            {line, col, :whitespace} ->
+              raise Huml.ParseError, message: "Unexpected whitespace at line:#{line} col:#{col}."
+          end
+
+        {struct, rest} |> dbg
+    end
+  end
+
+  defp parse_lists(tokens) do
+  end
+
+  def parse_dicts(tokens) do
+    [{_, _, first}, {_, _, second}, rest] = tokens
+
+    cond do
+      first == :colon && second == :colon ->
+        # multiline dict
+        nil
+
+      first == :colon && second != :colon ->
+        # inline dict
+        nil
     end
   end
 
