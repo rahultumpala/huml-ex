@@ -23,6 +23,6 @@ defmodule HUML do
 
   def parse(tokens) do
     {tokens, struct} = parse_vsn(tokens)
-    parse_root(tokens, struct)
+    parse_root(tokens, struct) |> dbg
   end
 end

@@ -14,17 +14,27 @@ defmodule Huml.Root do
         parse_empty_dict(struct, tokens)
 
       _ ->
-        {next_seq, rest} = read_until(tokens, [:whitespace, ",", :newline, :colon, :eol]) |> dbg()
+        {next_seq, rest} = read_until(tokens, [:whitespace, ",", :newline, :colon, :eol])
 
-        [next_token | _rest] = rest
+        [first, second | _rest] = rest
 
         {struct, rest} =
-          case next_token do
+          case first do
             {_, _, :colon} ->
-              parse_dicts(tokens)
+              case second do
+                {_, _, :colon} ->
+                  parse_vector(tokens, struct)
+
+                {_, _, :whitespace} ->
+                  parse_inline_dict(tokens, struct)
+
+                {line, col, tok} ->
+                  raise Huml.ParseError,
+                    message: "Unexpected character #{tok} at line:#{line} col:#{col}"
+              end
 
             {_, _, ","} ->
-              parse_lists(tokens)
+              parse_inline_list(tokens, struct)
 
             {_, _, :eol} ->
               cond do
@@ -34,7 +44,9 @@ defmodule Huml.Root do
                 length(next_seq) > 0 ->
                   struct =
                     struct
-                    |> Map.update(:entries, [], fn val -> [join_tokens(next_seq) |> normalize_tokens() |> dbg] ++ val end)
+                    |> Map.update(:entries, [], fn val ->
+                      [join_tokens(next_seq) |> normalize_tokens() |> dbg] ++ val
+                    end)
 
                   rest |> consume(1) |> parse_root(struct)
               end
@@ -47,11 +59,33 @@ defmodule Huml.Root do
     end
   end
 
-  defp parse_lists(tokens) do
+  defp parse_inline_list([], struct) do
+    {struct, []}
   end
 
-  def parse_dicts(tokens) do
-    [{_, _, first}, {_, _, second}, rest] = tokens
+  defp parse_inline_list([cur | rest] = tokens, struct) do
+    case cur do
+      {_, _, :eol} ->
+        {struct, rest}
+
+      {_, _, :whitespace} ->
+        parse_inline_list(rest, struct)
+
+      {_, _, ","} ->
+        parse_inline_list(rest, struct)
+
+      _ ->
+        {seq, rest} = read_until(tokens, [",", :whitespace, :eol])
+        struct = update_entries(seq, struct)
+        parse_inline_list(rest, struct)
+    end
+  end
+
+  defp parse_inline_dict(tokens, struct) do
+  end
+
+  def parse_vector(tokens, struct) do
+    [{_, _, first}, {_, _, second}, _rest] = tokens
 
     cond do
       first == :colon && second == :colon ->

@@ -108,4 +108,8 @@ defmodule Huml.Helpers do
       _ -> {:error, :no_match}
     end
   end
+
+  def update_entries(tokens, struct) do
+    Map.update(struct, :entries, [], fn val -> [join_tokens(tokens)] ++ val end)
+  end
 end

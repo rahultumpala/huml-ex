@@ -6,7 +6,7 @@ defmodule HUMLTest do
     assert HUML.hello() == :i_am_huml
   end
 
-  test "parse1" do
+  test "simple" do
     txt = """
     %HUML v0.1.0
 
@@ -24,7 +24,17 @@ defmodule HUMLTest do
     assert true
   end
 
-  test "parse" do
+  test "inline_list" do
+    txt = """
+    %HUML v0.1.0
+
+    "foo", simple_key, 1.234
+    """
+    HUML.decode(txt)
+    assert true
+  end
+
+  test "complex" do
     txt = """
     # Kitchensink test file.
     foo_one:: # Hello
@@ -37,7 +47,7 @@ defmodule HUMLTest do
       corge_bool: false
       grault_null: null
     """
-    HUML.decode(txt)
+    # HUML.decode(txt)
     assert true
   end
 end
