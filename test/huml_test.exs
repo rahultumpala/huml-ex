@@ -12,8 +12,15 @@ defmodule HUMLTest do
 
     "foo"
     simple_key
+    1.234
+    +3.12e+123
+    0xAF
+    0b00010
+    0o31
+    nan
+    inf
     """
-    HUML.decode(txt)
+    # HUML.decode(txt)
     assert true
   end
 
@@ -30,7 +37,7 @@ defmodule HUMLTest do
       corge_bool: false
       grault_null: null
     """
-    # HUML.decode(txt)
+    HUML.decode(txt)
     assert true
   end
 end

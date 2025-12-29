@@ -43,7 +43,7 @@ defmodule Huml.Root do
               raise Huml.ParseError, message: "Unexpected whitespace at line:#{line} col:#{col}."
           end
 
-        {struct, rest} |> dbg
+        {struct, rest}
     end
   end
 
