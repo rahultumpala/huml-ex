@@ -148,6 +148,20 @@ defmodule Huml.Helpers do
     end
   end
 
+  def add_children(struct, children) do
+    state = Map.get(struct, :entries, [])
+
+    cond do
+      is_map(state) ->
+        raise Huml.ParseError,
+          message:
+            "The document is already evaluated to be a dict. Adding inline lists is not allowed. Check the doc."
+
+      is_list(state) ->
+        Map.put(struct, :entries, [Map.get(children, :entries, []) | state])
+    end
+  end
+
   def update_entries(struct, tokens) do
     state = Map.get(struct, :entries, [])
 

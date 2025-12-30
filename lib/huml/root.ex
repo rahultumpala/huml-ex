@@ -22,13 +22,18 @@ defmodule Huml.Root do
           parse_multiline_vector(tokens, struct)
 
         _ ->
-          {next_seq, rest} = read_until(tokens, [:whitespace, ",", :newline, :colon, :eol])
+          {next_seq, rest} = read_until(tokens, [:whitespace, ",", :colon, :eol])
 
-          [first, second | _rest] = rest
+          dbg(next_seq)
+          dbg(rest)
+
+          [first | rest] = rest
 
           {struct, rest} =
             case first do
               {_, _, :colon} ->
+                [second | _rest] = rest
+
                 case second do
                   {_, _, :colon} ->
                     parse_vector(tokens, struct)
@@ -50,18 +55,17 @@ defmodule Huml.Root do
                     tokens |> consume(1) |> parse_root(struct)
 
                   length(next_seq) > 0 ->
-                    struct =
-                      struct
-                      |> Map.update(:entries, [], fn val ->
-                        [join_tokens(next_seq) |> normalize_tokens()] ++ val
-                      end)
+                    struct = struct |> update_entries(next_seq)
 
-                    rest |> consume(1) |> parse_root(struct)
+                    rest |> parse_root(struct)
                 end
 
               {line, col, :whitespace} ->
+                {seq, _rest} = read_until(tokens, [:eol])
+
                 raise Huml.ParseError,
-                  message: "Unexpected whitespace at line:#{line} col:#{col}."
+                  message:
+                    "Unexpected whitespace at line:#{line} col:#{col} in content '#{join_tokens(seq)}.'}"
             end
 
           {struct, rest}
@@ -168,9 +172,14 @@ defmodule Huml.Root do
           |> expect!(:eol)
           |> parse_multiline_vector(%{})
 
-        key = join_tokens(seq) |> normalize_tokens(:dict_key)
-        struct = update_entries(struct, key, Map.get(children, :entries, %{}))
-        {struct, rest}
+        if seq == [] do
+          struct = add_children(struct, children |> Map.get(:entries))
+          {struct, rest}
+        else
+          key = join_tokens(seq) |> normalize_tokens(:dict_key)
+          struct = update_entries(struct, key, Map.get(children, :entries, %{}))
+          {struct, rest}
+        end
 
       check?(rest, :whitespace) ->
         # inline dict or inline list
@@ -187,12 +196,39 @@ defmodule Huml.Root do
     tokens = tokens |> expect!(:indent)
 
     cond do
+      # multiline list
       check?(tokens, "-") ->
-        {struct, rest} = tokens |> expect!(:whitespace) |> parse_root(struct)
-        {struct, rest}
+        tokens =
+          tokens
+          |> expect!("-")
+          |> expect!(:whitespace)
+
+        cond do
+          check?(tokens, :colon) ->
+            tokens =
+              tokens
+              |> expect!(:colon)
+              |> expect!(:colon)
+              |> expect!(:eol)
+
+            {children, rest} = parse_multiline_vector(tokens, %{}) |> dbg
+            struct = add_children(struct, children)
+            {struct, rest}
+
+          true ->
+            tokens |> parse_root(struct) |> dbg
+        end
+
+      check?(tokens, :indent) ->
+        parse_multiline_vector(tokens, struct)
 
       true ->
-        tokens |> parse_root(struct)
+        [{line, _, _} | _rest] = tokens
+        {seq, _rest} = read_until(tokens, [:eol])
+
+        raise Huml.ParseError,
+          message:
+            "Expected a multiline list or multiline dict at line:#{line} but got '#{join_tokens(seq)}'¸"
     end
   end
 

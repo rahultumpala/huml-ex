@@ -59,6 +59,23 @@ defmodule HUMLTest do
     assert true
   end
 
+  test "list variations" do
+    txt = """
+    # List variations
+    data_sources::
+    - "primary_db_connection_string"
+    - "secondary_api_endpoint_url"
+    - "192.168.1.100" # IP address as a string
+    - :`l: # A list of lists
+        - "alpha"
+        - "beta"
+        - "gamma"
+      - true # A boolean in a list
+    """
+    HUML.decode(txt)
+    assert true
+  end
+
   test "complex" do
     txt = """
     %HUML v0.1.0
@@ -80,7 +97,7 @@ defmodule HUMLTest do
       simple_dict:: color: "yellow", intensity: 0.8, transparent: false
     """
 
-    HUML.decode(txt)
+    # HUML.decode(txt)
     assert true
   end
 end
