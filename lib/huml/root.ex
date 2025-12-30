@@ -191,15 +191,12 @@ defmodule Huml.Root do
           |> parse_root(new_struct(struct))
 
         if seq == [] do
+          # reverse to maintain list order defined in the file
           struct = add_children(struct, children)
           {struct, rest}
         else
           key = join_tokens(seq) |> normalize_tokens(:dict_key)
-
-          # reverse to maintain list order defined in the file
-          children = Map.get(children, :entries, [])
-
-          struct = update_entries(struct, key, children)
+          struct = update_entries(struct, key, Map.get(children, :entries, %{}))
           {struct, rest}
         end
 
@@ -219,34 +216,33 @@ defmodule Huml.Root do
   end
 
   defp parse_multiline_vector(tokens, struct) do
-    cond do
-      # multiline list
-      check?(tokens, "-") ->
-        tokens =
-          tokens
-          |> expect!("-")
-          |> expect!(:whitespace)
+    {struct, rest} =
+      cond do
+        # multiline list
+        check?(tokens, "-") ->
+          tokens =
+            tokens
+            |> expect!("-")
+            |> expect!(:whitespace)
 
-        cond do
-          check?(tokens, :colon) ->
-            {children, rest} =
+          cond do
+            check?(tokens, :colon) ->
               parse_vector(tokens, struct)
 
-            struct = add_children(struct, children)
-            {struct, rest}
+            true ->
+              parse_tokens(tokens, struct)
+          end
 
-          true ->
-            tokens |> parse_tokens(struct)
-        end
+        true ->
+          [{line, _, _} | _rest] = tokens
+          {seq, _rest} = read_until(tokens, [:eol])
 
-      true ->
-        [{line, _, _} | _rest] = tokens
-        {seq, _rest} = read_until(tokens, [:eol])
+          raise Huml.ParseError,
+            message:
+              "Expected a multiline list or multiline dict at line:#{line} but got '#{join_tokens(seq)}'¸"
+      end
 
-        raise Huml.ParseError,
-          message:
-            "Expected a multiline list or multiline dict at line:#{line} but got '#{join_tokens(seq)}'¸"
-    end
+    {struct, rest}
   end
 
   defp parse_empty_list(tokens, struct) do

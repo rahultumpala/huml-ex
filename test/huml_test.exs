@@ -180,7 +180,7 @@ defmodule HUMLTest do
       show_tooltips: true
     """
 
-    # HUML.decode(txt)  |> IO.inspect(limit: :infinity)
+    HUML.decode(txt)  |> IO.inspect(limit: :infinity)
     IO.puts("\n\n")
     assert true
   end

@@ -179,15 +179,7 @@ defmodule Huml.Helpers do
   def add_children(struct, children) do
     state = Map.get(struct, :entries, [])
     # reverse to maintain list order defined in the file
-    children_list = Map.get(children, :entries, [])
-
-    children_list =
-      if is_list(children_list) do
-        # children_list
-        Enum.reverse(children_list)
-      else
-        children_list
-      end
+    children_list = Map.get(children, :entries, []) |> Enum.reverse()
 
     cond do
       is_map(state) ->
@@ -218,6 +210,12 @@ defmodule Huml.Helpers do
   def update_entries(struct, key, value) do
     # matching on the shape of entries in struct, not in value
     state = Map.get(struct, :entries, %{})
+
+    value =
+      cond do
+        is_list(value) -> Enum.reverse(value)
+        true -> value
+      end
 
     cond do
       is_list(state) ->
