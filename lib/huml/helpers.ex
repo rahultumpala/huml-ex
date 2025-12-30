@@ -9,6 +9,7 @@ defmodule Huml.Helpers do
   end
 
   def expect!(tokens, token) when is_list(tokens) do
+    # matches and consumes the first token. returns the rest
     [cur | rest] = tokens
     expect!(cur, token)
     rest
@@ -57,6 +58,19 @@ defmodule Huml.Helpers do
     Enum.split_while(tokens, fn {_line, _col, tok} -> !(tok in match_tokens) end)
   end
 
+  def read_value(tokens) do
+    cond do
+      check?(tokens, "\"") ->
+        [cur | rest] = tokens
+        {seq, [d_quote | rest]} = rest |> read_until(["\""])
+        # join beginning and ending double quotes to the seq before normalizing.
+        {[cur] ++ seq ++ [d_quote], rest}
+
+      true ->
+        tokens |> read_until([:whitespace, ",", :eol])
+    end
+  end
+
   def consume(tokens, num) do
     {_discard, rest} = Enum.split(tokens, num)
     rest
@@ -68,7 +82,7 @@ defmodule Huml.Helpers do
   end
 
   def normalize_tokens(joined, type) do
-    string_rgx = ~r/^"(?<value>(\\\"|[^"\n ])*)"(?<comment>( # [^ \n]*))?$/
+    string_rgx = ~r/^"(?<value>(\\\"|[^"\n])*)"$/
     dict_key_rgx = ~r/^(?<value>^[a-zA-Z]([a-z]|[A-Z]|[0-9]|-|_)*)$/
     num_with_exp_rgx = ~r/^(?<value>(\+|-)?([0-9])+(\.([0-9])+)?(e(\+|-)?([0-9])+))$/
     num_rgx = ~r/^(?<value>(\+|-)?([0-9])+(\.([0-9])*)?)$/
@@ -134,7 +148,7 @@ defmodule Huml.Helpers do
     end
   end
 
-  def update_entries(tokens, struct) do
+  def update_entries(struct, tokens) do
     state = Map.get(struct, :entries, [])
 
     cond do
@@ -148,7 +162,7 @@ defmodule Huml.Helpers do
     end
   end
 
-  def update_entries(key, value, struct) do
+  def update_entries(struct, key, value) do
     state = Map.get(struct, :entries, %{})
 
     cond do

@@ -20,6 +20,7 @@ defmodule HUMLTest do
     nan
     inf
     """
+
     # HUML.decode(txt)
     assert true
   end
@@ -30,6 +31,7 @@ defmodule HUMLTest do
 
     "foo", simple_key, 1.234
     """
+
     # HUML.decode(txt)
     assert true
   end
@@ -40,12 +42,27 @@ defmodule HUMLTest do
 
     "foo": "bar", simple_key: 1.234
     """
+
+    # HUML.decode(txt)
+    assert true
+  end
+
+  test "multiline_dict" do
+    txt = """
+    # Kitchensink test file.
+    foo_one:: # Hello
+      # Scalar values testing - basic types
+      foo_string: "bar_value"
+    """
+
     # HUML.decode(txt)
     assert true
   end
 
   test "complex" do
     txt = """
+    %HUML v0.1.0
+
     # Kitchensink test file.
     foo_one:: # Hello
       # Scalar values testing - basic types
@@ -57,7 +74,8 @@ defmodule HUMLTest do
       corge_bool: false
       grault_null: null
     """
-    # HUML.decode(txt)
+
+    HUML.decode(txt)
     assert true
   end
 end

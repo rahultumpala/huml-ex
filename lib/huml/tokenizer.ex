@@ -15,7 +15,11 @@ defmodule Huml.Tokenizer do
         |> Enum.with_index(fn el, idx -> {idx + 1, el} end)
         |> Enum.map(fn {col, char} -> {line, col, char} end)
 
-      cols ++ [{line, String.length(content), :eol}]
+        if length(cols) > 0 do
+          cols ++ [{line, String.length(content), :eol}]
+        else
+          []
+        end
     end)
     |> Enum.filter(fn token_line ->
       # discard empty lines
