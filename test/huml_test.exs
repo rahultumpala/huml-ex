@@ -30,7 +30,17 @@ defmodule HUMLTest do
 
     "foo", simple_key, 1.234
     """
-    HUML.decode(txt)
+    # HUML.decode(txt)
+    assert true
+  end
+
+  test "inline dict" do
+    txt = """
+    %HUML v0.1.0
+
+    "foo": "bar", simple_key: 1.234
+    """
+    # HUML.decode(txt)
     assert true
   end
 

@@ -4,12 +4,14 @@ defmodule Huml.Tokenizer do
   def tokenize(str) do
     str
     |> String.split("\n")
-    |> Enum.with_index(fn el, idx -> {idx, el} end)
+    # 1 based indexing
+    |> Enum.with_index(fn el, idx -> {idx + 1, el} end)
     |> Enum.map(fn {line, content} ->
       cols =
         content
         |> String.codepoints()
-        |> Enum.with_index(fn el, idx -> {idx, el} end)
+        # 1 based indexing
+        |> Enum.with_index(fn el, idx -> {idx + 1, el} end)
         |> Enum.map(fn {col, char} -> {line, col, char} end)
 
       cols ++ [{line, String.length(content), :eol}]

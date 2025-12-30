@@ -7,6 +7,9 @@ defmodule Huml.Root do
 
   def parse_root([cur | _rest] = tokens, struct) do
     case cur do
+      {_, _, :eol} ->
+        consume(tokens, 1) |> parse_root(struct)
+
       {_line, _col, :square_bracket_open} ->
         parse_empty_list(struct, tokens)
 
@@ -81,7 +84,40 @@ defmodule Huml.Root do
     end
   end
 
+  defp parse_inline_dict([], struct) do
+    {struct, []}
+  end
+
   defp parse_inline_dict(tokens, struct) do
+    dbg(struct)
+
+    {seq, rest} = read_until(tokens, [:colon, :eol])
+
+    if length(seq) == 0 do
+      {struct, rest}
+    else
+      key = join_tokens(seq) |> normalize_tokens(:dict_key)
+
+      rest =
+        expect!(rest, :colon)
+        |> expect!(:whitespace)
+
+      {seq, rest} = read_until(rest, [:whitespace, ",", :eol])
+      value = join_tokens(seq) |> normalize_tokens()
+      struct = update_entries(key, value, struct)
+
+      cond do
+        check?(rest, :eol) ->
+          consume(rest, 1) |> parse_root(struct)
+
+        true ->
+          rest =
+            expect!(rest, ",")
+            |> expect!(:whitespace)
+
+          parse_inline_dict(rest, struct)
+      end
+    end
   end
 
   def parse_vector(tokens, struct) do

@@ -1,6 +1,17 @@
 defmodule Huml.Helpers do
+  def check?(tokens, token) when is_list(tokens) do
+    [cur | _rest] = tokens
+    check?(cur, token)
+  end
+
   def check?({_line, _col, char}, token) do
     char == token
+  end
+
+  def expect!(tokens, token) when is_list(tokens) do
+    [cur | rest] = tokens
+    expect!(cur, token)
+    rest
   end
 
   def expect!({line, col, char} = cur, token) do
@@ -52,6 +63,11 @@ defmodule Huml.Helpers do
   end
 
   def normalize_tokens(joined) do
+    # this is for joining all terminal values
+    normalize_tokens(joined, nil)
+  end
+
+  def normalize_tokens(joined, type) do
     string_rgx = ~r/^"(?<value>(\\\"|[^"\n ])*)"(?<comment>( # [^ \n]*))?$/
     dict_key_rgx = ~r/^(?<value>^[a-zA-Z]([a-z]|[A-Z]|[0-9]|-|_)*)$/
     num_with_exp_rgx = ~r/^(?<value>(\+|-)?([0-9])+(\.([0-9])+)?(e(\+|-)?([0-9])+))$/
@@ -62,26 +78,35 @@ defmodule Huml.Helpers do
     nan = ~r/^(?<value>nan)$/
     inf = ~r/^(?<value>(\+|-)?inf)$/
 
-    regexes = [
-      string_rgx,
-      dict_key_rgx,
-      num_with_exp_rgx,
-      num_rgx,
-      hexadecimal_rgx,
-      octal_rgx,
-      binary_rgx,
-      nan,
-      inf
-    ]
+    regexes =
+      if type == :dict_key do
+        [
+          string_rgx,
+          dict_key_rgx
+        ]
+      else
+        [
+          string_rgx,
+          dict_key_rgx,
+          num_with_exp_rgx,
+          num_rgx,
+          hexadecimal_rgx,
+          octal_rgx,
+          binary_rgx,
+          nan,
+          inf
+        ]
+      end
 
     {:ok, value} =
       Enum.map(regexes, &match_regex_and_length(&1, joined))
       |> Enum.filter(fn {status, _content} -> status == :ok end)
-      |> Enum.at(0, nil)
+      |> Enum.at(0, {:ok, nil})
 
     case value do
       nil ->
-        raise Huml.ParseError, message: "Expected a valid sequence of characters. Got: #{joined}"
+        raise Huml.ParseError,
+          message: "Expected a valid sequence of characters. Got: #{joined}"
 
       "+inf" ->
         :infinity
@@ -110,6 +135,30 @@ defmodule Huml.Helpers do
   end
 
   def update_entries(tokens, struct) do
-    Map.update(struct, :entries, [], fn val -> [join_tokens(tokens)] ++ val end)
+    state = Map.get(struct, :entries, [])
+
+    cond do
+      is_map(state) ->
+        raise Huml.ParseError,
+          message:
+            "The document is already evaluated to be a dict. Adding inline lists is not allowed. Check the doc."
+
+      is_list(state) ->
+        Map.put(struct, :entries, [join_tokens(tokens)] ++ state)
+    end
+  end
+
+  def update_entries(key, value, struct) do
+    state = Map.get(struct, :entries, %{})
+
+    cond do
+      is_list(state) ->
+        raise Huml.ParseError,
+          message:
+            "The document is already evaluated to be a list. Further nesting is not allowed. Check the doc."
+
+      is_map(state) ->
+        Map.put(struct, :entries, Map.put(state, key, value))
+    end
   end
 end
