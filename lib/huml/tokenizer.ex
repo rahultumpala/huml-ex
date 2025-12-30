@@ -15,11 +15,11 @@ defmodule Huml.Tokenizer do
         |> Enum.with_index(fn el, idx -> {idx + 1, el} end)
         |> Enum.map(fn {col, char} -> {line, col, char} end)
 
-        if length(cols) > 0 do
-          cols ++ [{line, String.length(content), :eol}]
-        else
-          []
-        end
+      if length(cols) > 0 do
+        cols ++ [{line, String.length(content), :eol}]
+      else
+        []
+      end
     end)
     |> Enum.filter(fn token_line ->
       # discard empty lines
@@ -102,31 +102,37 @@ defmodule Huml.Tokenizer do
     comment_rgx = ~r/(?<comment>(([ ])+# .*$))/
     trailing_spaces_rgx = ~r/(?<spaces>([ ])+$)/
 
-    str =
-      cond do
-        Regex.match?(comment_rgx, str) ->
-          match = Regex.named_captures(comment_rgx, str) |> Map.get("comment")
+    if str |> String.trim() |> String.length() == 0 do
+      {line_num, ""}
+    else
+      str =
+        cond do
+          Regex.match?(comment_rgx, str) ->
+            match = Regex.named_captures(comment_rgx, str) |> Map.get("comment")
 
-          # delete trailing comments
-          String.replace(str, match, "")
+            # delete trailing comments
+            String.replace(str, match, "")
 
-        true ->
-          str
-      end
+          true ->
+            str
+        end
 
-    str =
-      cond do
-        Regex.match?(trailing_spaces_rgx, str) ->
-          len =
-            Regex.named_captures(trailing_spaces_rgx, str) |> Map.get("spaces") |> String.length()
+      str =
+        cond do
+          Regex.match?(trailing_spaces_rgx, str) ->
+            len =
+              Regex.named_captures(trailing_spaces_rgx, str)
+              |> Map.get("spaces")
+              |> String.length()
 
-          raise Huml.ParseError,
-            message: "#{len} Trailing spaces found on line:#{line_num}. \nLine Content: #{str}"
+            raise Huml.ParseError,
+              message: "#{len} Trailing spaces found on line:#{line_num}. \nLine Content: #{str}"
 
-        true ->
-          str
-      end
+          true ->
+            str
+        end
 
-    {line_num, str}
+      {line_num, str}
+    end
   end
 end

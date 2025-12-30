@@ -73,6 +73,11 @@ defmodule HUMLTest do
       quux_bool: true
       corge_bool: false
       grault_null: null
+
+    # inline collections
+    inline_collections::
+      simple_list:: "red", "green", "blue"
+      simple_dict:: color: "yellow", intensity: 0.8, transparent: false
     """
 
     HUML.decode(txt)

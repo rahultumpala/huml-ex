@@ -70,6 +70,30 @@ defmodule Huml.Root do
     parse_root(rest, struct)
   end
 
+  defp parse_inline_vector(tokens, struct) do
+    # could be either inline list or inline dict.
+    {seq, rest} = read_value(tokens)
+
+    case rest do
+      [] ->
+        update_entries(struct, seq)
+
+      [{line, col, tok} | _rest] ->
+        case tok do
+          "," ->
+            parse_inline_list(tokens, struct)
+
+          :colon ->
+            parse_inline_dict(tokens, struct)
+
+          _ ->
+            raise Huml.ParseError,
+              message:
+                "Expected a comma or a colon after element at line:#{line} col:#{col} but found '#{tok}' after element '#{join_tokens(seq)}'."
+        end
+    end
+  end
+
   defp parse_inline_list([], struct) do
     {struct, []}
   end
@@ -149,9 +173,10 @@ defmodule Huml.Root do
         {struct, rest}
 
       check?(rest, :whitespace) ->
-        # inline dict
+        # inline dict or inline list
+        {value, rest} = rest |> consume(1) |> parse_inline_vector(%{})
+
         key = join_tokens(seq) |> normalize_tokens(:dict_key)
-        {value, rest} = parse_inline_dict(rest, %{})
         struct = update_entries(struct, key, Map.get(value, :entries, %{}))
 
         {struct, rest}

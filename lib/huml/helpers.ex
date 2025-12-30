@@ -67,7 +67,7 @@ defmodule Huml.Helpers do
         {[cur] ++ seq ++ [d_quote], rest}
 
       true ->
-        tokens |> read_until([:whitespace, ",", :eol])
+        tokens |> read_until([:colon, :whitespace, ",", :eol])
     end
   end
 
@@ -158,7 +158,7 @@ defmodule Huml.Helpers do
             "The document is already evaluated to be a dict. Adding inline lists is not allowed. Check the doc."
 
       is_list(state) ->
-        Map.put(struct, :entries, [join_tokens(tokens)] ++ state)
+        Map.put(struct, :entries, [join_tokens(tokens) |> normalize_tokens()] ++ state)
     end
   end
 
