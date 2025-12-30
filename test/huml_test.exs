@@ -63,10 +63,10 @@ defmodule HUMLTest do
     txt = """
     # List variations
     data_sources::
-    - "primary_db_connection_string"
-    - "secondary_api_endpoint_url"
-    - "192.168.1.100" # IP address as a string
-    - :`l: # A list of lists
+      - "primary_db_connection_string"
+      - "secondary_api_endpoint_url"
+      - "192.168.1.100" # IP address as a string
+      - :: # A list of lists
         - "alpha"
         - "beta"
         - "gamma"

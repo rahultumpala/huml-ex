@@ -58,6 +58,13 @@ defmodule Huml.Helpers do
     Enum.split_while(tokens, fn {_line, _col, tok} -> !(tok in match_tokens) end)
   end
 
+  def count_while(tokens, match_tokens) do
+    {match, _no_match} =
+      Enum.split_while(tokens, fn {_line, _col, tok} -> tok in match_tokens end)
+
+    length(match)
+  end
+
   def read_value(tokens) do
     cond do
       check?(tokens, "\"") ->
