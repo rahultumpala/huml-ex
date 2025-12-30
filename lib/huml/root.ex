@@ -1,77 +1,85 @@
 defmodule Huml.Root do
   import Huml.{Helpers}
 
+  @t_depth "__token_depth__"
+
   def parse_root([], struct) do
     {struct, []}
   end
 
-  def parse_root([cur | _rest] = tokens, struct) do
-    {struct, rest} =
-      case cur do
-        {_, _, :eol} ->
-          consume(tokens, 1) |> parse_root(struct)
+  def parse_tokens([cur | _rest] = tokens, struct) do
+    case cur do
+      {_, _, "-"} ->
+        tokens |> parse_multiline_vector(struct)
 
-        {_line, _col, :square_bracket_open} ->
-          parse_empty_list(struct, tokens)
+      {_line, _col, :square_bracket_open} ->
+        parse_empty_list(struct, tokens)
 
-        {_line, _col, :curly_bracket_open} ->
-          parse_empty_dict(struct, tokens)
+      {_line, _col, :curly_bracket_open} ->
+        parse_empty_dict(struct, tokens)
 
-        {_, _, :indent} ->
-          # this path must be from parsing multiline vectors. Return as is to resume parsing there.
-          parse_multiline_vector(tokens, struct)
+      _ ->
+        {cur_seq, rest} = read_until(tokens, [:whitespace, ",", :colon, :eol])
 
-        _ ->
-          {next_seq, rest} = read_until(tokens, [:whitespace, ",", :colon, :eol])
+        join_tokens(cur_seq)
 
-          dbg(next_seq)
-          dbg(rest)
+        [first | rest] = rest
 
-          [first | rest] = rest
+        {struct, rest} =
+          case first do
+            {_, _, :colon} ->
+              [second | _rest] = rest
 
-          {struct, rest} =
-            case first do
-              {_, _, :colon} ->
-                [second | _rest] = rest
+              case second do
+                {_, _, :colon} ->
+                  parse_vector(tokens, struct)
 
-                case second do
-                  {_, _, :colon} ->
-                    parse_vector(tokens, struct)
+                {_, _, :whitespace} ->
+                  parse_inline_dict(tokens, struct)
 
-                  {_, _, :whitespace} ->
-                    parse_inline_dict(tokens, struct)
+                {line, col, tok} ->
+                  raise Huml.ParseError,
+                    message: "Unexpected character #{tok} at line:#{line} col:#{col}"
+              end
 
-                  {line, col, tok} ->
-                    raise Huml.ParseError,
-                      message: "Unexpected character #{tok} at line:#{line} col:#{col}"
-                end
+            {_, _, ","} ->
+              parse_inline_list(tokens, struct)
 
-              {_, _, ","} ->
-                parse_inline_list(tokens, struct)
+            {_, _, :eol} ->
+              cond do
+                length(cur_seq) == 0 ->
+                  {struct, tokens |> consume(1)}
 
-              {_, _, :eol} ->
-                cond do
-                  length(next_seq) == 0 ->
-                    tokens |> consume(1) |> parse_root(struct)
+                length(cur_seq) > 0 ->
+                  struct = struct |> update_entries(cur_seq)
 
-                  length(next_seq) > 0 ->
-                    struct = struct |> update_entries(next_seq)
+                  {struct, rest}
+              end
 
-                    rest |> parse_root(struct)
-                end
+            {line, col, :whitespace} ->
+              {seq, _rest} = read_until(tokens, [:eol])
 
-              {line, col, :whitespace} ->
-                {seq, _rest} = read_until(tokens, [:eol])
+              raise Huml.ParseError,
+                message:
+                  "Unexpected whitespace at line:#{line} col:#{col} in content '#{join_tokens(seq)}.'}"
+          end
 
-                raise Huml.ParseError,
-                  message:
-                    "Unexpected whitespace at line:#{line} col:#{col} in content '#{join_tokens(seq)}.'}"
-            end
+        {struct, rest}
+    end
+  end
 
-          {struct, rest}
-      end
+  def parse_root(tokens, struct) do
+    expected_depth = get_d(struct, @t_depth)
+    struct
 
-    parse_root(rest, struct)
+    if !check_indents?(tokens, expected_depth) do
+      {struct, tokens}
+    else
+      tokens = expect_indents!(tokens, expected_depth)
+      {struct, rest} = parse_tokens(tokens, struct)
+
+      parse_root(rest, struct)
+    end
   end
 
   defp parse_inline_vector(tokens, struct) do
@@ -170,14 +178,18 @@ defmodule Huml.Root do
         {children, rest} =
           rest
           |> expect!(:eol)
-          |> parse_multiline_vector(%{})
+          |> parse_root(new_struct(struct))
 
         if seq == [] do
-          struct = add_children(struct, children |> Map.get(:entries))
+          struct = add_children(struct, children)
           {struct, rest}
         else
           key = join_tokens(seq) |> normalize_tokens(:dict_key)
-          struct = update_entries(struct, key, Map.get(children, :entries, %{}))
+
+          # reverse to maintain list order defined in the file
+          children = Map.get(children, :entries, []) |> Enum.reverse()
+
+          struct = update_entries(struct, key, children)
           {struct, rest}
         end
 
@@ -193,8 +205,6 @@ defmodule Huml.Root do
   end
 
   defp parse_multiline_vector(tokens, struct) do
-    tokens = tokens |> expect!(:indent)
-
     cond do
       # multiline list
       check?(tokens, "-") ->
@@ -205,22 +215,21 @@ defmodule Huml.Root do
 
         cond do
           check?(tokens, :colon) ->
-            tokens =
+            {children, rest} =
               tokens
               |> expect!(:colon)
               |> expect!(:colon)
               |> expect!(:eol)
+              |> parse_root(new_struct(struct))
 
-            {children, rest} = parse_multiline_vector(tokens, %{}) |> dbg
+            # children = Map.get(children, :entries, []) |> Enum.reverse()
+
             struct = add_children(struct, children)
             {struct, rest}
 
           true ->
-            tokens |> parse_root(struct) |> dbg
+            tokens |> parse_tokens(struct)
         end
-
-      check?(tokens, :indent) ->
-        parse_multiline_vector(tokens, struct)
 
       true ->
         [{line, _, _} | _rest] = tokens
@@ -256,5 +265,10 @@ defmodule Huml.Root do
           message:
             "Doc begins with an open curly bracket. Expected empty dict in the doc. But got #{join_tokens(tokens)}"
     end
+  end
+
+  def new_struct(struct) do
+    %{}
+    |> Map.put(@t_depth, get_d(struct, @t_depth) + 1)
   end
 end

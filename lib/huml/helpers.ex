@@ -157,6 +157,8 @@ defmodule Huml.Helpers do
 
   def add_children(struct, children) do
     state = Map.get(struct, :entries, [])
+    # reverse to maintain list order defined in the file
+    children_list = Map.get(children, :entries, []) |> Enum.reverse()
 
     cond do
       is_map(state) ->
@@ -165,11 +167,12 @@ defmodule Huml.Helpers do
             "The document is already evaluated to be a dict. Adding inline lists is not allowed. Check the doc."
 
       is_list(state) ->
-        Map.put(struct, :entries, [Map.get(children, :entries, []) | state])
+        Map.put(struct, :entries, [children_list] ++ state)
     end
   end
 
   def update_entries(struct, tokens) do
+    # matching on the shape of entries in struct, not in value
     state = Map.get(struct, :entries, [])
 
     cond do
@@ -184,6 +187,7 @@ defmodule Huml.Helpers do
   end
 
   def update_entries(struct, key, value) do
+    # matching on the shape of entries in struct, not in value
     state = Map.get(struct, :entries, %{})
 
     cond do
@@ -195,5 +199,28 @@ defmodule Huml.Helpers do
       is_map(state) ->
         Map.put(struct, :entries, Map.put(state, key, value))
     end
+  end
+
+  def check_indents?(tokens, count) do
+    {indents, _rest} = Enum.split_while(tokens, fn {_, _, tok} -> tok == :indent end)
+
+    length(indents) == count
+  end
+
+  def expect_indents!(tokens, count) do
+    {indents, rest} = Enum.split_while(tokens, fn {_, _, tok} -> tok == :indent end)
+
+    if length(indents) != count do
+      [{line, _, _} | _rest] = rest
+
+      raise Huml.ParseError,
+        message: "Expected #{count} indentations on line #{line}, got #{length(indents)}."
+    end
+
+    rest
+  end
+
+  def get_d(struct, str) do
+    Map.get(struct, str, 0)
   end
 end

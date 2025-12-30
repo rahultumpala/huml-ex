@@ -72,7 +72,7 @@ defmodule HUMLTest do
         - "gamma"
       - true # A boolean in a list
     """
-    HUML.decode(txt)
+    # HUML.decode(txt)
     assert true
   end
 
@@ -95,9 +95,20 @@ defmodule HUMLTest do
     inline_collections::
       simple_list:: "red", "green", "blue"
       simple_dict:: color: "yellow", intensity: 0.8, transparent: false
+
+    # List variations
+    data_sources::
+      - "primary_db_connection_string"
+      - "secondary_api_endpoint_url"
+      - "192.168.1.100" # IP address as a string
+      - :: # A list of lists
+        - "alpha"
+        - "beta"
+        - "gamma"
+      - true # A boolean in a list
     """
 
-    # HUML.decode(txt)
+    HUML.decode(txt)
     assert true
   end
 end
