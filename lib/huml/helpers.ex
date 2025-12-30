@@ -54,8 +54,29 @@ defmodule Huml.Helpers do
     end)
   end
 
-  def read_until(tokens, match_tokens) do
-    Enum.split_while(tokens, fn {_line, _col, tok} -> !(tok in match_tokens) end)
+  def read_until([], _prev, _match_tokens, acc) do
+    {acc, []}
+  end
+
+  def read_until([{_, _, tok} = cur | rest] = tokens, prev, match_tokens, acc) do
+    cond do
+      prev == "\\" || !(tok in match_tokens) -> read_until(rest, tok, match_tokens, acc ++ [cur])
+      tok in match_tokens -> {acc, tokens}
+    end
+  end
+
+  def read_until(tokens, match_tokens, inside_string? \\ false) do
+    {match, no_match} = read_until(tokens, nil, match_tokens, [])
+
+    match =
+      Enum.map(match, fn {line, col, tok} ->
+        cond do
+          tok == :colon && inside_string? -> {line, col, ":"}
+          true -> {line, col, tok}
+        end
+      end)
+
+    {match, no_match}
   end
 
   def count_while(tokens, match_tokens) do
@@ -65,16 +86,16 @@ defmodule Huml.Helpers do
     length(match)
   end
 
-  def read_value(tokens) do
+  def read_value(tokens, match_tokens \\ [:colon, :whitespace, ",", :eol]) do
     cond do
       check?(tokens, "\"") ->
         [cur | rest] = tokens
-        {seq, [d_quote | rest]} = rest |> read_until(["\""])
+        {seq, [d_quote | rest]} = rest |> read_until(["\""], true)
         # join beginning and ending double quotes to the seq before normalizing.
         {[cur] ++ seq ++ [d_quote], rest}
 
       true ->
-        tokens |> read_until([:colon, :whitespace, ",", :eol])
+        tokens |> read_until(match_tokens)
     end
   end
 
@@ -91,8 +112,8 @@ defmodule Huml.Helpers do
   def normalize_tokens(joined, type) do
     string_rgx = ~r/^"(?<value>(\\\"|[^"\n])*)"$/
     dict_key_rgx = ~r/^(?<value>^[a-zA-Z]([a-z]|[A-Z]|[0-9]|-|_)*)$/
-    num_with_exp_rgx = ~r/^(?<value>(\+|-)?([0-9])+(\.([0-9])+)?(e(\+|-)?([0-9])+))$/
-    num_rgx = ~r/^(?<value>(\+|-)?([0-9])+(\.([0-9])*)?)$/
+    num_with_exp_rgx = ~r/^(?<value>(\+|-)?([0-9]|)+(\.([0-9])+)?(e(\+|-)?([0-9])+))$/
+    num_rgx = ~r/^(?<value>(\+|-)?([0-9_])+(\.([0-9])*)?)$/
     hexadecimal_rgx = ~r/^(?<value>(\+|-)?0x([0-9]|[A-F])+)$/
     octal_rgx = ~r/^(?<value>(\+|-)?0o([0-7])+)$/
     binary_rgx = ~r/^(?<value>(\+|-)?0b([0-1])+)$/
@@ -158,7 +179,15 @@ defmodule Huml.Helpers do
   def add_children(struct, children) do
     state = Map.get(struct, :entries, [])
     # reverse to maintain list order defined in the file
-    children_list = Map.get(children, :entries, []) |> Enum.reverse()
+    children_list = Map.get(children, :entries, [])
+
+    children_list =
+      if is_list(children_list) do
+        # children_list
+        Enum.reverse(children_list)
+      else
+        children_list
+      end
 
     cond do
       is_map(state) ->

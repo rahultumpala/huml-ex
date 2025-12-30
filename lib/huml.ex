@@ -23,6 +23,8 @@ defmodule HUML do
 
   def parse(tokens) do
     {tokens, struct} = parse_vsn(tokens)
-    parse_root(tokens, struct) |> dbg
+    {struct, []} = parse_root(tokens, struct)
+
+    Map.get(struct, :entries)
   end
 end
