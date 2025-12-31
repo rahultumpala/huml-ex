@@ -1,4 +1,9 @@
 defmodule Huml.Helpers do
+  def check_multiline_str_start?(tokens) do
+    {match, _rest} = read_until_sequence(tokens, ["\"", "\"", "\"", :eol])
+    length(match) == 4
+  end
+
   def check?(tokens, token) when is_list(tokens) do
     [cur | _rest] = tokens
     check?(cur, token)
@@ -55,12 +60,12 @@ defmodule Huml.Helpers do
   end
 
   def join_tokens(tokens, remove_prefix_indent \\ 0) do
-    [{_, _, cur} | rest] = tokens
+    [{_, _, cur} | _rest] = tokens
 
     case cur do
       "\"" ->
         cond do
-          check?(rest, "\"") ->
+          check_multiline_str_start?(tokens) ->
             parse_multiline_string(tokens, "", false, remove_prefix_indent)
 
           true ->
@@ -112,7 +117,7 @@ defmodule Huml.Helpers do
       check?(tokens, "\"") ->
         [cur | rest] = tokens
 
-        if check?(rest, "\"") do
+        if check_multiline_str_start?(tokens) do
           read_multiline_string(tokens, false)
         else
           {seq, [d_quote | rest]} = rest |> read_until(["\""], true)

@@ -89,119 +89,228 @@ defmodule HUMLTest do
   end
 
   @tag run: true
-  test "complex, without multiline strings" do
+  test "complete spec test" do
     txt =
       ~S"""
-      # This is the root dictionary for our application configuration.
-      application_config::
-        application_name: "HUML Showcase Suite"
-        version: "1.0.0-beta"
-        environment: "development" # Can be 'production', 'staging', etc.
-        debug_mode: true
-        retry_attempts: 5
-        timeout_seconds: 30.5
-        feature_flags:: # A nested dictionary for feature toggles
-          new_dashboard_enabled: true
-          user_experiment_ab: false
-          "legacy-system.compatibility_mode": true # Quoted key
+      # Kitchensink test file.
+      foo_one:: # Hello
+        # Scalar values testing - basic types
+        foo_string: "bar_value"
+        bar_string: "baz with spaces"
+        baz_int: 42
+        qux_float: 3.14159
+        quux_bool: true
+        corge_bool: false
+        grault_null: null
 
-        # Contact information
-        contact_points::
-          - :: # List item: inline dictionary for admin
-            type: "admin"
-            email: "admin@example.com"
-            phone: null # Null value example
-          - :: # List item: multi-line dictionary for support
-            type: "support"
-            email: "support@example.com"
-            availability::
-              weekdays: "9am - 6pm"
-              weekends: "10am - 2pm"
+        # Numbers with various formats
+        foo_integers::
+          bar_positive: 1234567
+          baz_negative: -987654
+          qux_zero: 0
+          quux_underscore: 1_000_000
+          corge_hex: 0xDEADBEEF
+          grault_octal: 0o777
+          garply_binary: 0b1010101
+          waldo_large: 9_223_372_036_854_775_807
 
-        # Numeric data types showcase
-        numerical_data::
-          integer_val: 1_234_567
-          float_val: -0.00789
-          scientific_notation_val: 6.022e23
-          hex_val: 0xCAFEBABE
-          octal_val: 0o755
-          binary_val: 0b11011001
-          infinity_positive: +inf
-          infinity_negative: -inf
-          not_a_number: nan
-          empty_integer_list:: [] # Empty list
-          empty_mapping:: {}    # Empty dictionary
+        foo_floats::
+          bar_simple: 123.456
+          baz_negative: -78.90
+          qux_scientific: 1.23e10
+          quux_scientific_neg: -4.56e-7
+          corge_zero: 0.0
+          grault_precision: 0.123456789
+          garply_large_exp: 6.022e23
 
-        # String variations
-        string_examples::
-          simple_greeting: "Hello, \"Universe\"!"
-          path_example: "C:\\Users\\Default\\Documents"
-          multiline_preserved_poem: ```
-            The HUML spec, so clear and bright,
-              Makes data shine with pure delight.
-            No ambiguity, no YAML fright,
-            Just structured sense, and pure insight.
-          ```
-          multiline_stripped_script: \"""
-                #!/bin/bash
-                echo "Starting service..."
-                # This script has leading spaces stripped.
-                  # Even this indented comment.
-                exit 0
-          \"""
+        # String edge cases
+        foo_strings::
+          bar_empty: ""
+          baz_spaces: "   spaces   "
+          qux_escaped: "Hello \"World\" with 'quotes'"
+          quux_path: "C:\\path\\to\\file.txt"
+          corge_unicode: "Unicode: αβγδε 中文 🚀"
+          grault_newlines: "Line1\nLine2\tTabbed"
+          garply_long: "This is a very long string that contains many words and might test the parser's ability to handle extended content without issues"
 
-        # List variations
-        data_sources::
-          - "primary_db_connection_string"
-          - "secondary_api_endpoint_url"
-          - "192.168.1.100" # IP address as a string
-          - :: # A list of lists
-            - "alpha"
-            - "beta"
-            - "gamma"
-          - true # A boolean in a list
+      foo_two:: # Yet another section.
+        # Inline collections
+        foo_inline_list:: 1, 2, 3, 4, 5
+        bar_inline_list:: "alpha", "beta", "gamma"
+        baz_inline_list:: true, false, null, 42
+        qux_inline_list:: 1, "mixed", true, null, 3.14
+        quux_inline_dict:: foo: "bar", baz: 123, qux: true
+        corge_inline_dict:: nested: "deep_value", simple: "test"
 
-        inline_collections::
-          simple_list:: "red", "green", "blue"
-          simple_dict:: color: "yellow", intensity: 0.8, transparent: false
-          # List of inline dictionaries
-          points_of_interest::
-            - :: x: 10, y: 20, label: "Start"
-            - :: x: 15, y: 25, label: "Checkpoint 1"
-            - :: x: 30, y: 10, label: "End"
+        # Empty collections
+        foo_empty_list:: []
+        bar_empty_dict:: {}
+        baz_empty_spaced:: []  # With trailing comment
+        qux_empty_spaced:: {}    # Spaced comment
 
-        # Example of a more complex nested structure
-        server_nodes::
-          - :: # First server node (dictionary)
-            id: "node-alpha-001"
-            ip_address: "10.0.0.1"
-            roles:: "web", "api" # Inline list
-            status: "active"
-            "metadata with space": "custom server info" # Quoted key
-            config_file_content: ```
-              # Sample config for node-alpha-001
-              port = 8080
-              threads = 16
-            ```
-          - :: # Second server node (dictionary)
-            id: "node-beta-002"
-            ip_address: "10.0.0.2"
-            roles::
-              - "database_primary"
-              - "replication_master"
-            status: "pending_maintenance"
-            hardware_specs::
-              cpu_cores: 8
-              ram_gb: 64
-              storage_tb: 2
+        # Multi-line collections
+        foo_list::
+          - "first_item"
+          - "second_item"
+          - "third_item"
+          - null
+          - 42
+          - true
+          - false
 
-      # Another top-level key, independent of 'application_config'
-      # This demonstrates that a HUML file can have multiple top-level keys,
-      # implicitly forming a root dictionary.
-      user_preferences::
-        theme: "solarized_dark"
-        font_size_pt: 12
-        show_tooltips: true
+        bar_mixed_list::
+          - "string_value"
+          - 123
+          - ::
+            nested_foo: "nested_bar"
+            nested_baz: 456
+          - :: inline: "dict", in: "list"
+          - ::
+            deep_nested::
+              level_two::
+                level_three: "deep_value"
+
+        # Nested dictionaries
+        foo_dict::
+          bar_key: "bar_value"
+          baz_key: 789
+          qux_nested::
+            quux_sub: "quux_value"
+            corge_sub: true
+            grault_deep::
+              garply_deeper: "deepest_value"
+              waldo_numbers:: 1, 2, 3, 4
+
+        # List of dictionaries edge cases
+        foo_complex_list::
+          - ::
+            bar_type: "first"
+            baz_value: 100
+            qux_flag: true
+          - :: # Inline comment
+            bar_type: "second"
+            baz_value: 200
+            qux_nested::
+              quux_inner: "inner_value"
+              corge_list:: "a", "b", "c"
+          - ::
+            bar_type: "third"
+            baz_empty:: {}
+            qux_null: null
+          - :: inline_dict: "in_list", foo: 42, bar: null
+
+        # Special key formats
+        foo_special_keys::
+          "quoted-key": "quoted_value"
+          "key with spaces": "spaced_value"
+          "key.with.dots": "dotted_value"
+          "key-with-dashes": "dashed_value"
+          "key_with_underscores": "underscore_value"
+          "123numeric_start": "numeric_key"
+          "special!@#$%": "special_chars"
+
+        # Comment variations
+        foo_comments: "value" # End of line comment
+        bar_comments: "value" # No space comment
+        baz_comments: "value"  # Double space comment
+        qux_comments: "value"   # Triple space
+        # Full line comment
+        quux_comments: "value"
+
+      foo_three::
+        # Multiline strings
+        foo_multiline_preserved: \"""
+          Preserved formatting
+            With different indentation
+              And multiple levels
+            Back to level two
+          Back to level one
+        \"""
+
+        baz_multiline_edge: \"""
+          Line with no indent
+              Line with indent
+          Line back to no indent
+        \"""
+
+        # Boolean variations
+        foo_booleans::
+          bar_true: true
+          baz_false: false
+          qux_TRUE: true
+          quux_FALSE: false
+          corge_True: true
+          grault_False: false
+
+        # Null variations
+        foo_nulls::
+          bar_null: null
+          baz_NULL: null
+          qux_Null: null
+
+        # Complex nesting test
+        foo_complex_nesting::
+          bar_level1::
+            baz_level2::
+              qux_level3::
+                quux_level4::
+                  corge_deep_value: "very_deep"
+                  grault_deep_list::
+                    - "deep_item1"
+                    - ::
+                      deep_dict_key: "deep_dict_value"
+                      deep_dict_list:: "nested", "in", "deep", "dict"
+                    - "deep_item3"
+                  garply_deep_inline:: deep: "inline", dict: true
+
+        # Mixed inline and multiline in same structure
+        foo_mixed_structure::
+          bar_inline_in_multi:: quick: "inline"
+          baz_multi_list::
+            - "first"
+            - :: inline: "dict"
+            - ::
+              multiline_key: "multiline_value"
+              another_key: 123
+
+        # Edge case keys and values
+        foo_edge_cases::
+          "": "empty_key"
+          " ": "space_key"
+          "  ": "double_space_key"
+          "123": "numeric_string_key"
+          "true": "boolean_string_key"
+          "null": "null_string_key"
+          key_with_empty_value: ""
+          key_with_space_value: " "
+
+        # Large inline structures
+        foo_large_inline:: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, "eleven", "twelve", true, false, null, 3.14
+        bar_large_inline:: a: 1, b: 2, c: 3, d: 4, e: 5, f: "six", g: true, h: null
+
+      foo_final::
+        # Final complex test structure
+        foo_final_test::
+          bar_everything::
+            - ::
+              string_val: "test"
+              int_val: 42
+              float_val: 3.14
+              bool_val: true
+              null_val: null
+              inline_list:: 1, "two", 3.0, true, null
+              inline_dict:: key: "value", num: 123
+              nested_dict::
+                deep_key: "deep_value"
+                deep_list::
+                  - "item1"
+                  - :: nested: "item"
+                  - "item3"
+            - "simple_string_item"
+            - 999
+            - ::
+              final_nested::
+                ultimate_test:: success: true, complete: "yes"
       """
 
     HUML.decode(txt) |> IO.inspect(limit: :infinity)
