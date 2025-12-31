@@ -34,8 +34,6 @@ defmodule Huml.Root do
       _ ->
         {cur_seq, rest} = read_value(tokens)
 
-        join_tokens(cur_seq)
-
         [first | rest] = rest
 
         {struct, rest} =
@@ -158,17 +156,25 @@ defmodule Huml.Root do
       value = join_tokens(seq) |> normalize_tokens()
       struct = struct |> update_entries(key, value)
 
+      rest |> dbg
+
       cond do
+        rest == [] ->
+          {struct, []}
+
         check?(rest, :eol) ->
           rest = consume(rest, 1)
           {struct, rest}
 
-        true ->
+        check?(rest, ",") ->
           rest =
             expect!(rest, ",")
             |> expect!(:whitespace)
 
           parse_inline_dict(rest, struct)
+
+        true ->
+          {struct, rest}
       end
     end
   end

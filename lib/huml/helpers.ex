@@ -44,7 +44,7 @@ defmodule Huml.Helpers do
     end
   end
 
-  def join_tokens(tokens) do
+  def join_regular_tokens(tokens) do
     Enum.reduce(tokens, "", fn {_line, _col, tok}, acc ->
       case tok do
         :whitespace -> acc <> " "
@@ -52,6 +52,28 @@ defmodule Huml.Helpers do
         _ -> acc <> tok
       end
     end)
+  end
+
+  def join_tokens(tokens) do
+    [{_, _, cur} | rest] = tokens
+
+    case cur do
+      "\"" ->
+        cond do
+          check?(rest, "\"") ->
+            tokens |> IO.inspect(limit: :infinity)
+            parse_multiline_string(tokens, "", false)
+
+          true ->
+            join_regular_tokens(tokens)
+        end
+
+      "`" ->
+        parse_multiline_string(tokens, "", true)
+
+      _ ->
+        join_regular_tokens(tokens)
+    end
   end
 
   def read_until([], _prev, _match_tokens, acc) do
@@ -90,9 +112,17 @@ defmodule Huml.Helpers do
     cond do
       check?(tokens, "\"") ->
         [cur | rest] = tokens
-        {seq, [d_quote | rest]} = rest |> read_until(["\""], true)
-        # join beginning and ending double quotes to the seq before normalizing.
-        {[cur] ++ seq ++ [d_quote], rest}
+
+        if check?(rest, "\"") do
+          read_multiline_string(tokens, false) |> dbg
+        else
+          {seq, [d_quote | rest]} = rest |> read_until(["\""], true)
+          # join beginning and ending double quotes to the seq before normalizing.
+          {[cur] ++ seq ++ [d_quote], rest}
+        end
+
+      check?(tokens, "`") ->
+        read_multiline_string(tokens, true)
 
       true ->
         tokens |> read_until(match_tokens)
@@ -110,6 +140,9 @@ defmodule Huml.Helpers do
   end
 
   def normalize_tokens(joined, type) do
+    joined |> dbg
+    multiline_string_with_spaces_rgx = ~r/^```\n(?<value>(.*\n)*)```\n$/
+    multiline_string_without_spaces_rgx = ~r/^\"\"\"\n(?<value>(.*\n)*)\"\"\"\n$/
     string_rgx = ~r/^"(?<value>(\\\"|[^"\n])*)"$/
     dict_key_rgx = ~r/^(?<value>^[a-zA-Z]([a-z]|[A-Z]|[0-9]|-|_)*)$/
     num_with_exp_rgx = ~r/^(?<value>(\+|-)?([0-9]|)+(\.([0-9])+)?(e(\+|-)?([0-9])+))$/
@@ -136,7 +169,9 @@ defmodule Huml.Helpers do
           octal_rgx,
           binary_rgx,
           nan,
-          inf
+          inf,
+          multiline_string_with_spaces_rgx,
+          multiline_string_without_spaces_rgx
         ]
       end
 
@@ -249,5 +284,104 @@ defmodule Huml.Helpers do
 
   def get_d(struct, str) do
     Map.get(struct, str, 0)
+  end
+
+  def read_multiline_string([]) do
+    raise Huml.ParseError,
+      message:
+        "No designated ending for the multiline string. Check multiline strings in your doc."
+  end
+
+  def read_multiline_string(tokens, preserve_spaces? \\ false) do
+    {string_tokens, rest} =
+      case preserve_spaces? do
+        false ->
+          prefix = Enum.take(tokens, 4)
+          tokens = tokens |> expect!("\"") |> expect!("\"") |> expect!("\"") |> expect!(:eol)
+          {string_toks, rest} = read_until_sequence(tokens, ["\"", "\"", "\"", :eol])
+          # not consuming so that regex can work
+          {prefix ++ string_toks, rest}
+
+        true ->
+          prefix = Enum.take(tokens, 4)
+          tokens = tokens |> expect!("`") |> expect!("`") |> expect!("`") |> expect!(:eol)
+          {string_toks, rest} = read_until_sequence(tokens, ["`", "`", "`", :eol])
+          # not consuming so that regex can work
+          {prefix ++ string_toks, rest}
+      end
+
+    {string_tokens, rest}
+  end
+
+  def read_until_sequence(tokens, seq) do
+    {match, _count, rest} =
+      Enum.reduce(tokens, {[], 0, []}, fn {_, _, tok} = cur, {match, count, rest} ->
+        cond do
+          count == -1 ->
+            {match, count, [cur | rest]}
+
+          # minus 1 to account for zero based indexing
+          tok == Enum.at(seq, count) && count == length(seq) - 1 ->
+            {[cur | match], -1, rest}
+
+          tok == Enum.at(seq, count) ->
+            {[cur | match], count + 1, rest}
+
+          true ->
+            # reset count to maintaing sequence matching
+            {[cur | match], 0, rest}
+        end
+      end)
+
+    # reverse since we're adding cur at the beginning instead of the end
+    {Enum.reverse(match), Enum.reverse(rest)}
+  end
+
+  def parse_multiline_string([], acc, _preserve_spaces?), do: acc
+
+  def parse_multiline_string(tokens, acc, preserve_spaces?) do
+    {line, rest} = read_until(tokens, [:eol])
+
+    line =
+      Enum.reduce(line, "", fn {_, _, tok}, line_acc ->
+        case tok do
+          :indent ->
+            line_acc <> "  "
+
+          :colon ->
+            line_acc <> ":"
+
+          :square_bracket_open ->
+            line_acc <> "["
+
+          :square_bracket_close ->
+            line_acc <> "]"
+
+          :curly_bracket_open ->
+            line_acc <> "{"
+
+          :curly_bracket_close ->
+            line_acc <> "}"
+
+          :whitespace -> line_acc <> " "
+
+          _ ->
+            line_acc <> tok
+        end
+      end)
+
+    # consume :eol token
+    rest = rest |> consume(1)
+
+    line =
+      case preserve_spaces? do
+        true ->
+          line
+
+        false ->
+          line |> String.trim()
+      end
+
+    parse_multiline_string(rest, acc <> line <> "\n", preserve_spaces?)
   end
 end

@@ -25,7 +25,7 @@ defmodule Huml.Tokenizer do
       # discard empty lines
       # discard lines that being with a pound sign. These are all comments and can be ignored.
       with true <- length(token_line) > 0,
-           str <- join_tokens(token_line) |> String.trim(),
+           str <- join_regular_tokens(token_line) |> String.trim(),
            true <- String.length(str) > 0 && String.starts_with?(str, "#") do
         false
       else
@@ -69,9 +69,6 @@ defmodule Huml.Tokenizer do
 
           " " ->
             :whitespace
-
-          "`" ->
-            :backtick
 
           ":" ->
             :colon
