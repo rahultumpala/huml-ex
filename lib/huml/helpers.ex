@@ -318,6 +318,10 @@ defmodule Huml.Helpers do
             "The document is already evaluated to be a list. Further nesting is not allowed. Check the doc."
 
       is_map(state) ->
+        if Map.has_key?(state, key) do
+          raise Huml.ParseError, message: "Duplicate key '#{key}' found."
+        end
+
         Map.put(struct, :entries, Map.put(state, key, value))
     end
   end

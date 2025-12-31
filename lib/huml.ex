@@ -5,24 +5,19 @@ defmodule HUML do
 
   import Huml.{Vsn, Helpers, Tokenizer, Root}
 
-  def hello do
-    :i_am_huml
-  end
-
   def decode(str) do
-    tokens = tokenize(str)
+    try do
+      tokens = tokenize(str)
 
-    if length(tokens) == 0 do
-      %{}
-    else
-      try do
+      if length(tokens) == 0 do
+        {:error, "Empty document."}
+      else
         reject!(Enum.at(tokens, 0), :whitespace)
 
         {:ok, parse(tokens)}
-      rescue
-        e ->
-          {:error, e}
       end
+    rescue
+      e -> {:error, e}
     end
   end
 

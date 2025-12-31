@@ -99,7 +99,14 @@ defmodule Huml.Tokenizer do
     comment_rgx = ~r/(?<comment>(([ ])+# .*$))/
     trailing_spaces_rgx = ~r/(?<spaces>([ ])+$)/
 
+    actual_len = String.length(str)
+
     if str |> String.trim() |> String.length() == 0 do
+      if actual_len > 0 do
+        raise Huml.ParseError,
+          message: "Found trailing spaces on an empty line at line:#{line_num}."
+      end
+
       {line_num, ""}
     else
       str =

@@ -180,6 +180,7 @@ defmodule Huml.Root do
   def parse_vector(tokens, struct) do
     # read both colon values
     {seq, rest} = read_until(tokens, [:colon])
+    cur_depth = get_d(struct, @t_depth)
 
     rest =
       rest
@@ -195,6 +196,10 @@ defmodule Huml.Root do
           |> parse_root(new_struct(struct))
 
         if seq == [] do
+          if cur_depth == 0 do
+            raise Huml.ParseError, message: "Key cannot be empty at the top level."
+          end
+
           # reverse to maintain list order defined in the file
           struct = add_children(struct, children)
           {struct, rest}
@@ -209,6 +214,10 @@ defmodule Huml.Root do
         {value, rest} = rest |> consume(1) |> parse_inline_vector(%{})
 
         if seq == [] do
+          if cur_depth == 0 do
+            raise Huml.ParseError, message: "Key cannot be empty at the top level."
+          end
+
           struct = add_children(struct, value)
           {struct, rest}
         else

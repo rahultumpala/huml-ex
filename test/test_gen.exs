@@ -24,7 +24,7 @@ defmodule TestGen do
           test unquote(name) do
             IO.puts("Running Test #{unquote(name)}")
 
-            case HUML.decode(unquote(input)) do
+            case HUML.decode(unquote(input)) |> dbg do
               {:error, _} -> assert true == unquote(error)
               {:ok, _} -> assert false == unquote(error)
             end
