@@ -49,12 +49,22 @@ defmodule Huml.Helpers do
     end
   end
 
-  def join_regular_tokens(tokens) do
-    Enum.reduce(tokens, "", fn {_line, _col, tok}, acc ->
+  def join_regular_tokens(tokens, raise_eol? \\ false) do
+    Enum.reduce(tokens, "", fn {line, col, tok}, acc ->
       case tok do
-        :whitespace -> acc <> " "
-        :eol -> acc
-        _ -> acc <> tok
+        :whitespace ->
+          acc <> " "
+
+        :eol ->
+          if raise_eol? do
+            raise Huml.ParseError,
+              message: "Found unexpected newline character at line:#{line} col:#{col}."
+          else
+            acc
+          end
+
+        _ ->
+          acc <> tok
       end
     end)
   end
@@ -69,7 +79,7 @@ defmodule Huml.Helpers do
             parse_multiline_string(tokens, "", false, remove_prefix_indent)
 
           true ->
-            join_regular_tokens(tokens)
+            join_regular_tokens(tokens, true)
         end
 
       "`" ->
@@ -146,7 +156,7 @@ defmodule Huml.Helpers do
   def normalize_tokens(joined, type) do
     multiline_string_with_spaces_rgx = ~r/^```\n(?<value>(.*\n)*)([ ])*```\n$/
     multiline_string_without_spaces_rgx = ~r/^\"\"\"\n(?<value>(.*\n)*)([ ])*\"\"\"\n$/
-    string_rgx = ~r/^"(?<value>(\\\"|[^"\n])*)"$/
+    string_rgx = ~r/^"(?<value>(\\[^n]|[^"(\\\n)\n])*)"$/
     dict_key_rgx = ~r/^(?<value>^[a-zA-Z]([a-z]|[A-Z]|[0-9]|-|_)*)$/
     num_with_exp_rgx = ~r/^(?<value>(\+|-)?([0-9]|)+(\.([0-9])+)?(e(\+|-)?([0-9])+))$/
     num_rgx = ~r/^(?<value>(\+|-)?([0-9_])+(\.([0-9])*)?)$/
