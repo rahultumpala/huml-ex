@@ -6,6 +6,7 @@ defmodule Huml.Tokenizer do
     |> String.split("\n")
     # 1 based indexing
     |> Enum.with_index(fn el, idx -> {idx + 1, el} end)
+    |> Enum.map(&reject_ambiguous_comments/1)
     |> Enum.map(&remove_trailing/1)
     |> Enum.map(fn {line, content} ->
       cols =
@@ -138,5 +139,15 @@ defmodule Huml.Tokenizer do
 
       {line_num, str}
     end
+  end
+
+  def reject_ambiguous_comments({line_num, line_str}) do
+    regex = ~r/^.+:: # .+$/
+
+    if Regex.match?(regex, line_str) do
+      raise Huml.ParseError, message: "Found ambiguous comment on line:#{line_num}"
+    end
+
+    {line_num, line_str}
   end
 end
