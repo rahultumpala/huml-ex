@@ -46,7 +46,15 @@ defmodule Huml.Root do
                   parse_vector(tokens, struct)
 
                 {_, _, :whitespace} ->
-                  parse_inline_dict(tokens, struct)
+                  {struct, rest} = parse_inline_dict(tokens, struct)
+
+                  with 0 <- get_d(struct, @t_depth),
+                       true <- rest != [] do
+                    raise Huml.ParseError,
+                      message: "Doc must end if root element is an inline dict."
+                  end
+
+                  {struct, rest}
 
                 {line, col, tok} ->
                   raise Huml.ParseError,
@@ -154,7 +162,10 @@ defmodule Huml.Root do
         |> expect!(:whitespace)
 
       {seq, rest} = read_value(rest)
-      value = join_tokens(seq, get_d(struct, @t_depth) + 1) |> assert_has_quotes() |> normalize_tokens()
+
+      value =
+        join_tokens(seq, get_d(struct, @t_depth) + 1) |> assert_has_quotes() |> normalize_tokens()
+
       struct = struct |> update_entries(key, value)
 
       cond do
