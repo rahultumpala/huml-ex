@@ -54,22 +54,21 @@ defmodule Huml.Helpers do
     end)
   end
 
-  def join_tokens(tokens) do
+  def join_tokens(tokens, remove_prefix_indent \\ 0) do
     [{_, _, cur} | rest] = tokens
 
     case cur do
       "\"" ->
         cond do
           check?(rest, "\"") ->
-            tokens |> IO.inspect(limit: :infinity)
-            parse_multiline_string(tokens, "", false)
+            parse_multiline_string(tokens, "", false, remove_prefix_indent) |> dbg
 
           true ->
             join_regular_tokens(tokens)
         end
 
       "`" ->
-        parse_multiline_string(tokens, "", true)
+        parse_multiline_string(tokens, "", true, remove_prefix_indent) |> dbg
 
       _ ->
         join_regular_tokens(tokens)
@@ -140,9 +139,8 @@ defmodule Huml.Helpers do
   end
 
   def normalize_tokens(joined, type) do
-    joined |> dbg
-    multiline_string_with_spaces_rgx = ~r/^```\n(?<value>(.*\n)*)```\n$/
-    multiline_string_without_spaces_rgx = ~r/^\"\"\"\n(?<value>(.*\n)*)\"\"\"\n$/
+    multiline_string_with_spaces_rgx = ~r/^```\n(?<value>(.*\n)*)([ ])*```\n$/
+    multiline_string_without_spaces_rgx = ~r/^\"\"\"\n(?<value>(.*\n)*)([ ])*\"\"\"\n$/
     string_rgx = ~r/^"(?<value>(\\\"|[^"\n])*)"$/
     dict_key_rgx = ~r/^(?<value>^[a-zA-Z]([a-z]|[A-Z]|[0-9]|-|_)*)$/
     num_with_exp_rgx = ~r/^(?<value>(\+|-)?([0-9]|)+(\.([0-9])+)?(e(\+|-)?([0-9])+))$/
@@ -337,9 +335,9 @@ defmodule Huml.Helpers do
     {Enum.reverse(match), Enum.reverse(rest)}
   end
 
-  def parse_multiline_string([], acc, _preserve_spaces?), do: acc
+  def parse_multiline_string([], acc, _preserve_spaces?, _remove_prefix_indent), do: acc
 
-  def parse_multiline_string(tokens, acc, preserve_spaces?) do
+  def parse_multiline_string(tokens, acc, preserve_spaces?, remove_prefix_indent) do
     {line, rest} = read_until(tokens, [:eol])
 
     line =
@@ -363,7 +361,8 @@ defmodule Huml.Helpers do
           :curly_bracket_close ->
             line_acc <> "}"
 
-          :whitespace -> line_acc <> " "
+          :whitespace ->
+            line_acc <> " "
 
           _ ->
             line_acc <> tok
@@ -374,6 +373,9 @@ defmodule Huml.Helpers do
     rest = rest |> consume(1)
 
     line =
+      Regex.replace(~r/^ {#{remove_prefix_indent}}/, line, "")
+
+    line =
       case preserve_spaces? do
         true ->
           line
@@ -382,6 +384,6 @@ defmodule Huml.Helpers do
           line |> String.trim()
       end
 
-    parse_multiline_string(rest, acc <> line <> "\n", preserve_spaces?)
+    parse_multiline_string(rest, acc <> line <> "\n", preserve_spaces?, remove_prefix_indent)
   end
 end
