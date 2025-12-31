@@ -27,10 +27,10 @@ defmodule Huml.Helpers do
     end
   end
 
-  def reject!({line, col, char} = cur, token) do
+  def reject!([{line, col, char} = cur | _rest], token) do
     if check?(cur, token) do
       raise Huml.ParseError,
-        message: "Did not expect #{char} at line:#{line} col:#{col}"
+        message: "Unexpected '#{char}' at line:#{line} col:#{col}"
     end
   end
 
@@ -293,6 +293,8 @@ defmodule Huml.Helpers do
     # matching on the shape of entries in struct, not in value
     state = Map.get(struct, :entries, [])
 
+    value = join_tokens(tokens) |> assert_has_quotes() |> normalize_tokens()
+
     cond do
       is_map(state) ->
         raise Huml.ParseError,
@@ -300,7 +302,7 @@ defmodule Huml.Helpers do
             "The document is already evaluated to be a dict. Adding inline lists is not allowed. Check the doc."
 
       is_list(state) ->
-        Map.put(struct, :entries, [join_tokens(tokens) |> normalize_tokens()] ++ state)
+        Map.put(struct, :entries, [value] ++ state)
     end
   end
 
@@ -459,7 +461,11 @@ defmodule Huml.Helpers do
     dict_key_rgx = ~r/^(?<value>^[a-zA-Z]([a-z]|[A-Z]|[0-9]|-|_)*)$/
     valid_unquoted_rgx = ~r/^(true|false|\+inf|-inf|inf|nan|null)$/
 
-    if Regex.match?(dict_key_rgx, value) && !Regex.match?(valid_unquoted_rgx, value) do
+    with true <- value != nil,
+         false <- is_number(value),
+         false <- is_atom(value),
+         true <- Regex.match?(dict_key_rgx, value),
+         false <- Regex.match?(valid_unquoted_rgx, value) do
       raise Huml.ParseError, message: "Expected a quoted string but found '#{value}'."
     end
 

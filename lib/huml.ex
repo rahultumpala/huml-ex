@@ -12,7 +12,7 @@ defmodule HUML do
       if length(tokens) == 0 do
         {:error, "Empty document."}
       else
-        reject!(Enum.at(tokens, 0), :whitespace)
+        reject!(tokens, :whitespace)
 
         {:ok, parse(tokens)}
       end

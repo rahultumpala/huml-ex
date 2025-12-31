@@ -127,6 +127,7 @@ defmodule Huml.Root do
         parse_inline_list(rest, struct)
 
       {_, _, ","} ->
+        tokens |> expect!(",") |> expect!(:whitespace) |> reject!(:whitespace)
         parse_inline_list(rest, struct)
 
       _ ->

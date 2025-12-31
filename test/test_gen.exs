@@ -33,6 +33,10 @@ defmodule TestGen do
                 assert true == unquote(error)
 
               {:ok, _} ->
+                if false != unquote(error) do
+                  {unquote(input)} |> dbg
+                end
+
                 assert false == unquote(error)
             end
           end
