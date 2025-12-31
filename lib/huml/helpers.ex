@@ -224,6 +224,9 @@ defmodule Huml.Helpers do
       "false" ->
         false
 
+      "null" ->
+        nil
+
       {:number, string} ->
         string = string |> String.replace("_", "")
 
@@ -450,5 +453,16 @@ defmodule Huml.Helpers do
       end
 
     parse_multiline_string(rest, acc <> line <> "\n", preserve_spaces?, remove_prefix_indent)
+  end
+
+  def assert_has_quotes(value) do
+    dict_key_rgx = ~r/^(?<value>^[a-zA-Z]([a-z]|[A-Z]|[0-9]|-|_)*)$/
+    valid_unquoted_rgx = ~r/^(true|false|\+inf|-inf|inf|nan|null)$/
+
+    if Regex.match?(dict_key_rgx, value) && !Regex.match?(valid_unquoted_rgx, value) do
+      raise Huml.ParseError, message: "Expected a quoted string but found '#{value}'."
+    end
+
+    value
   end
 end
