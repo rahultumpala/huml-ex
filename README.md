@@ -1,4 +1,4 @@
-# huml-elx
+# huml-ex
 Elixir support for HUML markup
 
 ## Installation
