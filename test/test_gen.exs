@@ -32,8 +32,9 @@ defmodule TestGen do
 
                 assert true == unquote(error)
 
-              {:ok, _} ->
+              {:ok, struct} ->
                 if false != unquote(error) do
+                  struct |> dbg
                   {unquote(input)} |> dbg
                 end
 

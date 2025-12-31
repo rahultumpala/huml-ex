@@ -50,6 +50,7 @@ defmodule Huml.Helpers do
   end
 
   def join_regular_tokens(tokens, raise_eol? \\ false) do
+    # dbg(tokens)
     Enum.reduce(tokens, "", fn {line, col, tok}, acc ->
       case tok do
         :whitespace ->
@@ -60,7 +61,7 @@ defmodule Huml.Helpers do
             raise Huml.ParseError,
               message: "Found unexpected newline character at line:#{line} col:#{col}."
           else
-            acc
+            acc <> "\n"
           end
 
         _ ->
@@ -156,7 +157,7 @@ defmodule Huml.Helpers do
   def normalize_tokens(joined, type) do
     multiline_string_with_spaces_rgx = ~r/^```\n(?<value>(.*\n)*)([ ])*```\n$/
     multiline_string_without_spaces_rgx = ~r/^\"\"\"\n(?<value>(.*\n)*)([ ])*\"\"\"\n$/
-    string_rgx = ~r/^"(?<value>(\\[^n]|[^"(\\\n)\n])*)"$/
+    string_rgx = ~r/^"(?<value>(\\\"|[^"(\\\n)\n])*)"$/
     dict_key_rgx = ~r/^(?<value>^[a-zA-Z]([a-z]|[A-Z]|[0-9]|-|_)*)$/
     num_with_exp_rgx = ~r/^(?<value>(\+|-)?([0-9]|)+(\.([0-9])+)?(e(\+|-)?([0-9])+))$/
     num_rgx = ~r/^(?<value>(\+|-)?([0-9_])+(\.([0-9])*)?)$/
@@ -419,6 +420,24 @@ defmodule Huml.Helpers do
 
   def parse_multiline_string(tokens, acc, preserve_spaces?, remove_prefix_indent) do
     {line, rest} = read_until(tokens, [:eol])
+
+    {indents, _rest} =
+      Enum.split_while(
+        line,
+        fn {_, _, tok} -> tok == :indent end
+      )
+
+    if preserve_spaces? && length(indents) != remove_prefix_indent do
+      raise Huml.ParseError,
+        message: "Expected #{remove_prefix_indent} indents but got #{length(indents)}."
+    end
+
+    with true <- Regex.match?(~r/^([ ])+"""$/, join_regular_tokens(line)),
+         true <- length(indents) != remove_prefix_indent - 1 do
+      raise Huml.ParseError,
+        message:
+          "Expected #{remove_prefix_indent - 1} indents before closing of multiline string."
+    end
 
     line =
       Enum.reduce(line, "", fn {_, _, tok}, line_acc ->

@@ -13,7 +13,6 @@ defmodule HUML do
         {:error, "Empty document."}
       else
         reject!(tokens, :whitespace)
-
         {:ok, parse(tokens)}
       end
     rescue
@@ -25,6 +24,14 @@ defmodule HUML do
     {tokens, struct} = parse_vsn(tokens)
     {struct, []} = parse_root(tokens, struct)
 
-    Map.get(struct, :entries)
+    entries = Map.get(struct, :entries, [])
+
+    cond do
+      entries == [] && Map.has_key?(struct, :version) ->
+        raise Huml.ParseError, message: "Doc has only version. No entries. Invalid doc."
+
+      true ->
+        entries
+    end
   end
 end

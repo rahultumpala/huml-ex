@@ -154,7 +154,7 @@ defmodule Huml.Root do
         |> expect!(:whitespace)
 
       {seq, rest} = read_value(rest)
-      value = join_tokens(seq, get_d(struct, @t_depth) + 4) |> assert_has_quotes() |> normalize_tokens()
+      value = join_tokens(seq, get_d(struct, @t_depth) + 1) |> assert_has_quotes() |> normalize_tokens()
       struct = struct |> update_entries(key, value)
 
       cond do
