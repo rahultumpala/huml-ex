@@ -153,7 +153,6 @@ defmodule Huml.Root do
         |> expect!(:whitespace)
 
       {seq, rest} = read_value(rest)
-      get_d(struct, @t_depth) |> dbg()
       value = join_tokens(seq, get_d(struct, @t_depth) + 4) |> normalize_tokens()
       struct = struct |> update_entries(key, value)
 

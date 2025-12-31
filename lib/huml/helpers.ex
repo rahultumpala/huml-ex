@@ -61,14 +61,14 @@ defmodule Huml.Helpers do
       "\"" ->
         cond do
           check?(rest, "\"") ->
-            parse_multiline_string(tokens, "", false, remove_prefix_indent) |> dbg
+            parse_multiline_string(tokens, "", false, remove_prefix_indent)
 
           true ->
             join_regular_tokens(tokens)
         end
 
       "`" ->
-        parse_multiline_string(tokens, "", true, remove_prefix_indent) |> dbg
+        parse_multiline_string(tokens, "", true, remove_prefix_indent)
 
       _ ->
         join_regular_tokens(tokens)
@@ -113,7 +113,7 @@ defmodule Huml.Helpers do
         [cur | rest] = tokens
 
         if check?(rest, "\"") do
-          read_multiline_string(tokens, false) |> dbg
+          read_multiline_string(tokens, false)
         else
           {seq, [d_quote | rest]} = rest |> read_until(["\""], true)
           # join beginning and ending double quotes to the seq before normalizing.
@@ -161,11 +161,6 @@ defmodule Huml.Helpers do
         [
           string_rgx,
           dict_key_rgx,
-          num_with_exp_rgx,
-          num_rgx,
-          hexadecimal_rgx,
-          octal_rgx,
-          binary_rgx,
           nan,
           inf,
           multiline_string_with_spaces_rgx,
@@ -173,10 +168,33 @@ defmodule Huml.Helpers do
         ]
       end
 
+    number_regexes = [
+      num_with_exp_rgx,
+      num_rgx,
+      hexadecimal_rgx,
+      octal_rgx,
+      binary_rgx
+    ]
+
     {:ok, value} =
       Enum.map(regexes, &match_regex_and_length(&1, joined))
       |> Enum.filter(fn {status, _content} -> status == :ok end)
       |> Enum.at(0, {:ok, nil})
+
+    value =
+      if value != nil do
+        value
+      else
+        {:ok, value} =
+          Enum.map(number_regexes, &match_regex_and_length(&1, joined))
+          |> Enum.filter(fn {status, _content} -> status == :ok end)
+          |> Enum.at(0, {:ok, nil})
+
+        cond do
+          value == nil -> nil
+          true -> {:number, value}
+        end
+      end
 
     case value do
       nil ->
@@ -194,6 +212,44 @@ defmodule Huml.Helpers do
 
       "nan" ->
         :nan
+
+      "true" ->
+        true
+
+      "false" ->
+        false
+
+      {:number, string} ->
+        string = string |> String.replace("_", "")
+
+        parsed_num =
+          case String.downcase(string) do
+            "0b" <> rest ->
+              Integer.parse(rest, 2)
+
+            "0o" <> rest ->
+              Integer.parse(rest, 8)
+
+            "0x" <> rest ->
+              Integer.parse(rest, 16)
+
+            _ ->
+              case Integer.parse(string) do
+                {int, ""} ->
+                  {int, ""}
+
+                _ ->
+                  case Float.parse(string) do
+                    {float, ""} -> {float, ""}
+                    _ -> {:error, "Unable to parse #{string} as number."}
+                  end
+              end
+          end
+
+        case parsed_num do
+          {num, ""} -> num
+          {:error, message} -> raise Huml.ParseError, message: message
+        end
 
       _ ->
         value
