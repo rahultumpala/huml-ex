@@ -15,9 +15,14 @@ defmodule HUML do
     if length(tokens) == 0 do
       %{}
     else
-      reject!(Enum.at(tokens, 0), :whitespace)
+      try do
+        reject!(Enum.at(tokens, 0), :whitespace)
 
-      parse(tokens)
+        {:ok, parse(tokens)}
+      rescue
+        e ->
+          {:error, e}
+      end
     end
   end
 
