@@ -21,7 +21,7 @@ The API is similar to the Jason Elixir library.
 - `inf` , `+inf` --> `:infinity`
 - `-inf`         --> `:neg_infinity`
 - `null`         --> `nil`
-- `false` and `true` are same as Elixir's in-built boolean types
+- `false` and `true` are same as Elixir's built in boolean types
 
 ## Coverage
 
@@ -30,7 +30,7 @@ Finished in 0.3 seconds (0.00s async, 0.3s sync)
 174 tests, 0 failures
 ```
 
-This library uses git submodules to load upstream tests into the [tests](./tests/) folder.
+This library uses git submodules to load [upstream tests](https://github.com/huml-lang/tests/) into the `tests` folder.
 
 [`test_gen.exs`](./test/test_gen.exs) contains a convenient macro to auto generate ExUnit test cases from upstream test definitions.
 
