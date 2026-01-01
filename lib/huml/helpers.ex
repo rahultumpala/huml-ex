@@ -159,7 +159,9 @@ defmodule Huml.Helpers do
   def normalize_tokens(joined, type) do
     multiline_string_with_spaces_rgx = ~r/^```\n(?<value>(.*\n)*)([ ])*```\n$/
     multiline_string_without_spaces_rgx = ~r/^\"\"\"\n(?<value>(.*\n)*)([ ])*\"\"\"\n$/
-    string_rgx = ~r/^"(?<value>(\\\"|[^"(\\\n)\n])*)"$/
+    string_rgx = ~r/^"(?<value>(\\"|[^"])*")$/
+    # match any escaped sequence except \n \" \b \t \\ \v \f \/ \r
+    invalid_string_rgx = ~r/\\[^"bfnrtv\\\/]/
     dict_key_rgx = ~r/^(?<value>^[a-zA-Z]([a-z]|[A-Z]|[0-9]|-|_)*)$/
     num_with_exp_rgx = ~r/^(?<value>(\+|-)?([0-9]|)+(\.([0-9])+)?(e(\+|-)?([0-9])+))$/
     num_rgx = ~r/^(?<value>(\+|-)?([0-9_])+(\.([0-9])*)?)$/
@@ -168,6 +170,11 @@ defmodule Huml.Helpers do
     binary_rgx = ~r/^(?<value>(\+|-)?0b([0-1])+)$/
     nan = ~r/^(?<value>nan)$/
     inf = ~r/^(?<value>(\+|-)?inf)$/
+
+    with true <- Regex.match?(string_rgx, joined),
+         true <- Regex.match?(invalid_string_rgx, joined) do
+      raise Huml.ParseError, message: "Invalid escape sequence found: '#{joined}"
+    end
 
     regexes =
       if type == :dict_key do
