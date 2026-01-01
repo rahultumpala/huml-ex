@@ -7,7 +7,7 @@ defmodule TestGen do
 
         _ ->
           throw(
-            "Could not read assertions file: tests/assertions/mixed.json. Did you git init submodule?"
+            "Could not read assertions file: tests/assertions/mixed.json. Did you run `git submodule update`?"
           )
       end
 

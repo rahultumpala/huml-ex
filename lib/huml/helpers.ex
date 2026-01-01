@@ -50,7 +50,6 @@ defmodule Huml.Helpers do
   end
 
   def join_regular_tokens(tokens, raise_eol? \\ false) do
-    # dbg(tokens)
     Enum.reduce(tokens, "", fn {line, col, tok}, acc ->
       case tok do
         :whitespace ->
@@ -63,6 +62,9 @@ defmodule Huml.Helpers do
           else
             acc <> "\n"
           end
+
+        :indent ->
+          acc <> "  "
 
         _ ->
           acc <> tok
