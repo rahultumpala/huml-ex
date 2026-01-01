@@ -38,4 +38,15 @@ Running `mix test` will generate tests and run the implementation against them.
 
 ## Installation
 
-Not available in hex yet.
+Clone the git repo and reference the path in the  `mix.exs` file of your project.
+
+```elixir
+# in mix.exs
+
+defp deps do
+  [{:huml, path: "<path to huml-ex project>"}]
+end
+```
+
+This library is not available in hex yet.
+
