@@ -2,11 +2,14 @@ defmodule Huml.Tokenizer do
   import Huml.Helpers
 
   def tokenize(str) do
+
+    total_lines = String.split(str, "\n") |> length()
+
     str
     |> String.split("\n")
     # 1 based indexing
     |> Enum.with_index(fn el, idx -> {idx + 1, el} end)
-    |> Enum.map(&reject_ambiguous_comments/1)
+    |> Enum.map(&reject_ambiguous_comments(&1, total_lines))
     |> Enum.map(&remove_trailing/1)
     |> Enum.map(fn {line, content} ->
       cols =
@@ -141,10 +144,12 @@ defmodule Huml.Tokenizer do
     end
   end
 
-  def reject_ambiguous_comments({line_num, line_str}) do
+  def reject_ambiguous_comments({line_num, line_str}, total_lines) do
     regex = ~r/^.+:: # .+$/
 
-    if Regex.match?(regex, line_str) do
+    if Regex.match?(regex, line_str) && line_num == total_lines do
+      # If this is the last line and theres a "key :: # comment" throw this error
+      # else most likely there will be another parser error or a valid value.
       raise Huml.ParseError, message: "Found ambiguous comment on line:#{line_num}"
     end
 
