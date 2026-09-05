@@ -511,4 +511,8 @@ defmodule Huml.Helpers do
 
     value
   end
+
+  def is_string_multiline?(string) do
+    String.contains?(string, "\n")
+  end
 end

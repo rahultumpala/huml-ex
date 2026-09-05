@@ -8,11 +8,12 @@ This library implements the HUML [v0.1.0](https://huml.io/specifications/v0-1-0)
 The API is similar to the Jason Elixir library.
 
 ```elixir
-# HUML.decode/1
-
-{:ok, doc} = HUML.decode(valid_huml_doc_str)
-
+# Successful decode
+{:ok, huml_map} = HUML.decode(valid_huml_doc_str)
+# Unsuccessful decode
 {:error, message} = HUML.decode(invalid_huml_doc_str)
+# Successful encode
+{:ok, encoded_str} = HUML.encode(huml_map)
 ```
 
 - A dictionary item in the doc is reprsented as an Elixir Map struct
