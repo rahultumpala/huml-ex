@@ -159,7 +159,7 @@ defmodule Huml.Helpers do
   def normalize_tokens(joined, type) do
     multiline_string_with_spaces_rgx = ~r/^```\n(?<value>(.*\n)*)([ ])*```\n$/
     multiline_string_without_spaces_rgx = ~r/^\"\"\"\n(?<value>(.*\n)*)([ ])*\"\"\"\n$/
-    string_rgx = ~r/^"(?<value>(\\"|[^"])*")$/
+    string_rgx = ~r/^"(?<value>(\\"|[^"])*)"$/
     # match any escaped sequence except \n \" \b \t \\ \v \f \/ \r but only if that sequence is not after an escaped backslash.
     # ex: c:\\path ( the sequence \p is not invalid here since the backslash is also escaped.)
     # using (?<!\\) - Negative lookbehind to ensure the backslash is not escaped when an invalid escape sequence is found.

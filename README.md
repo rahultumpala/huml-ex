@@ -23,6 +23,69 @@ The API is similar to the Jason Elixir library.
 - `null`         --> `nil`
 - `false` and `true` are same as Elixir's built in boolean types
 
+## Example
+
+An Example of a complex HUML definition parsed into an Elixir Map.
+
+```elixir
+test_huml = """
+foo_final::
+  # Final complex test structure
+  foo_final_test::
+    bar_everything::
+      - ::
+        string_val: "test"
+        int_val: 42
+        float_val: 3.14
+        bool_val: true
+        null_val: null
+        inline_list:: 1, "two", 3.0, true, null
+        inline_dict:: key: "value", num: 123
+        nested_dict::
+          deep_key: "deep_value"
+          deep_list::
+            - "item1"
+            - :: nested: "item"
+            - "item3"
+      - "simple_string_item"
+      - 999
+      - ::
+        final_nested::
+          ultimate_test:: success: true, complete: "yes"
+"""
+
+# HUML.decode(test_huml)
+{:ok,
+ %{
+   "foo_final" => %{
+     "foo_final_test" => %{
+       "bar_everything" => [
+         [
+           {"string_val", "test"},
+           {"null_val", nil},
+           {"nested_dict",
+            %{
+              "deep_key" => "deep_value",
+              "deep_list" => ["item1", [{"nested", "item"}], "item3"]
+            }},
+           {"int_val", 42},
+           {"inline_list", [1, "two", 3.0, true, nil]},
+           {"inline_dict", %{"key" => "value", "num" => 123}},
+           {"float_val", 3.14},
+           {"bool_val", true}
+         ],
+         "simple_string_item",
+         999,
+         [
+           {"final_nested",
+            %{"ultimate_test" => %{"complete" => "yes", "success" => true}}}
+         ]
+       ]
+     }
+   }
+ }}
+```
+
 ## Coverage
 
 ```
@@ -38,15 +101,12 @@ Running `mix test` will generate tests and run the implementation against them.
 
 ## Installation
 
-Clone the git repo and reference the path in the  `mix.exs` file of your project.
+Install from git as this library is not available in Hex yet.
 
 ```elixir
 # in mix.exs
 
 defp deps do
-  [{:huml, path: "<path to huml-ex project>"}]
+  [{:huml, git: "https://github.com/rahultumpala/huml-ex.git"}]
 end
 ```
-
-This library is not available in hex yet.
-
