@@ -79,14 +79,13 @@ defmodule Huml.Helpers do
       "\"" ->
         cond do
           check_multiline_str_start?(tokens) ->
-            parse_multiline_string(tokens, "", false, remove_prefix_indent)
+            # consume and discard the first 4 tokens [", ", ", :eol]
+            tokens = consume(tokens, 4)
+            parse_multiline_string(tokens, "\"", true, remove_prefix_indent)
 
           true ->
             join_regular_tokens(tokens, true)
         end
-
-      "`" ->
-        parse_multiline_string(tokens, "", true, remove_prefix_indent)
 
       _ ->
         join_regular_tokens(tokens)
@@ -131,15 +130,12 @@ defmodule Huml.Helpers do
         [cur | rest] = tokens
 
         if check_multiline_str_start?(tokens) do
-          read_multiline_string(tokens, false)
+          read_multiline_string(tokens, true)
         else
           {seq, [d_quote | rest]} = rest |> read_until(["\""], true)
           # join beginning and ending double quotes to the seq before normalizing.
           {[cur] ++ seq ++ [d_quote], rest}
         end
-
-      check?(tokens, "`") ->
-        read_multiline_string(tokens, true)
 
       true ->
         tokens |> read_until(match_tokens)
@@ -157,9 +153,8 @@ defmodule Huml.Helpers do
   end
 
   def normalize_tokens(joined, type) do
-    multiline_string_with_spaces_rgx = ~r/^```\n(?<value>(.*\n)*)([ ])*```\n$/
-    multiline_string_without_spaces_rgx = ~r/^\"\"\"\n(?<value>(.*\n)*)([ ])*\"\"\"\n$/
     string_rgx = ~r/^"(?<value>(\\"|[^"])*)"$/
+
     # match any escaped sequence except \n \" \b \t \\ \v \f \/ \r but only if that sequence is not after an escaped backslash.
     # ex: c:\\path ( the sequence \p is not invalid here since the backslash is also escaped.)
     # using (?<!\\) - Negative lookbehind to ensure the backslash is not escaped when an invalid escape sequence is found.
@@ -189,9 +184,7 @@ defmodule Huml.Helpers do
           string_rgx,
           dict_key_rgx,
           nan,
-          inf,
-          multiline_string_with_spaces_rgx,
-          multiline_string_without_spaces_rgx
+          inf
         ]
       end
 
@@ -382,20 +375,13 @@ defmodule Huml.Helpers do
         "No designated ending for the multiline string. Check multiline strings in your doc."
   end
 
-  def read_multiline_string(tokens, preserve_spaces? \\ false) do
+  def read_multiline_string(tokens, preserve_spaces?) do
     {string_tokens, rest} =
       case preserve_spaces? do
-        false ->
+        true ->
           prefix = Enum.take(tokens, 4)
           tokens = tokens |> expect!("\"") |> expect!("\"") |> expect!("\"") |> expect!(:eol)
           {string_toks, rest} = read_until_sequence(tokens, ["\"", "\"", "\"", :eol])
-          # not consuming so that regex can work
-          {prefix ++ string_toks, rest}
-
-        true ->
-          prefix = Enum.take(tokens, 4)
-          tokens = tokens |> expect!("`") |> expect!("`") |> expect!("`") |> expect!(:eol)
-          {string_toks, rest} = read_until_sequence(tokens, ["`", "`", "`", :eol])
           # not consuming so that regex can work
           {prefix ++ string_toks, rest}
       end
@@ -438,63 +424,68 @@ defmodule Huml.Helpers do
         fn {_, _, tok} -> tok == :indent end
       )
 
-    if preserve_spaces? && length(indents) != remove_prefix_indent do
-      raise Huml.ParseError,
-        message: "Expected #{remove_prefix_indent} indents but got #{length(indents)}."
-    end
+    is_end_of_multiline_str = Regex.match?(~r/^([ ])?"""$/, join_regular_tokens(line))
 
-    with true <- Regex.match?(~r/^([ ])+"""$/, join_regular_tokens(line)),
-         true <- length(indents) != remove_prefix_indent - 1 do
-      raise Huml.ParseError,
-        message:
-          "Expected #{remove_prefix_indent - 1} indents before closing of multiline string."
-    end
-
-    line =
-      Enum.reduce(line, "", fn {_, _, tok}, line_acc ->
-        case tok do
-          :indent ->
-            line_acc <> "  "
-
-          :colon ->
-            line_acc <> ":"
-
-          :square_bracket_open ->
-            line_acc <> "["
-
-          :square_bracket_close ->
-            line_acc <> "]"
-
-          :curly_bracket_open ->
-            line_acc <> "{"
-
-          :curly_bracket_close ->
-            line_acc <> "}"
-
-          :whitespace ->
-            line_acc <> " "
-
-          _ ->
-            line_acc <> tok
-        end
-      end)
-
-    # consume :eol token
-    rest = rest |> consume(1)
-
-    line =
-      Regex.replace(~r/^ {#{remove_prefix_indent}}/, line, "")
-
-    line =
-      case preserve_spaces? do
-        true ->
-          line
-
-        false ->
-          line |> String.trim()
+    if is_end_of_multiline_str do
+      if length(indents) != remove_prefix_indent - 1 do
+        raise Huml.ParseError,
+          message:
+            "Expected #{remove_prefix_indent - 1} indents before closing of multiline string."
+      else
+        acc <> "\""
+      end
+    else
+      if preserve_spaces? && length(indents) < remove_prefix_indent do
+        raise Huml.ParseError,
+          message: "Expected #{remove_prefix_indent} indents but got #{length(indents)}."
       end
 
-    parse_multiline_string(rest, acc <> line <> "\n", preserve_spaces?, remove_prefix_indent)
+      line =
+        Enum.reduce(line, "", fn {_, _, tok}, line_acc ->
+          case tok do
+            :indent ->
+              line_acc <> "  "
+
+            :colon ->
+              line_acc <> ":"
+
+            :square_bracket_open ->
+              line_acc <> "["
+
+            :square_bracket_close ->
+              line_acc <> "]"
+
+            :curly_bracket_open ->
+              line_acc <> "{"
+
+            :curly_bracket_close ->
+              line_acc <> "}"
+
+            :whitespace ->
+              line_acc <> " "
+
+            _ ->
+              line_acc <> tok
+          end
+        end)
+
+      # consume :eol token
+      rest = rest |> consume(1)
+
+      line =
+        Regex.replace(~r/^(  ){#{remove_prefix_indent}}/, line, "")
+
+      line =
+        case preserve_spaces? do
+          true ->
+            line
+
+          false ->
+            line |> String.trim()
+        end
+
+      parse_multiline_string(rest, acc <> line <> "\n", preserve_spaces?, remove_prefix_indent)
+    end
   end
 
   def assert_has_quotes(value) do
